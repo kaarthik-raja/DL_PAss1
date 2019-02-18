@@ -7,7 +7,7 @@
 import numpy as np
 import pandas as pd 
 import matplotlib.pyplot as plt
-import argparse
+import argparse as agp
 
 
 # In[11]:
@@ -26,6 +26,22 @@ train=pd.read_csv(train_path)
 test=pd.read_csv(test_path)
 valid=pd.read_csv(valid_path)
 
+#create global variables
+lr= 0.01 # learning rate
+momentum=0.5 
+num_hidden=3 
+sizes=np.zeros(3)
+activation= "sigmoid"
+lossfn= "sq" 
+opt= "adam" # optimizer
+batch_size=20 
+epochs=5
+anneal=True
+#save paths
+save_dir=""
+train=""
+val=""
+test=""
 
 # In[18]:
 
@@ -66,14 +82,15 @@ b=np.random.rand(10)
 wt.append(w)
 bias.append(b)
 
+def fgrad(hs):
+    pass
 
-# In[115]:
+def fval(a):
+    pass
 
+def outputError(y,oneH):
+    pass
 
-#print(wt)
-
-
-# In[116]:
 
 
 # implementing functions to do different tasks. This is the main function block
@@ -155,13 +172,14 @@ print(y[0])
 np.shape(y)
 
 
-# In[ ]:
+def main()
+
+if __name__=="__main__":
+    main()
+    
 
 
 
-
-
-# In[ ]:
 
 
 
