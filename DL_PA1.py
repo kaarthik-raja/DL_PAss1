@@ -109,7 +109,6 @@ def initwts():
 #         Dak = np.multiply(Dhk,np.multiply(hs[k] , 1-hs[k]) )        
     
 #     return yhat
-initwts() # to initialize weights before the program run
 
 def momentum_grad_desc(num_hidden,sizes,momentum,gamma):
     eta=0.1
@@ -151,30 +150,22 @@ def momentum_grad_desc(num_hidden,sizes,momentum,gamma):
 
         momentum_w[k]=np.multiply(momentum_w[k],gamma)
         momentum_w[k]=np.add(momentum_w[k],np.multiply(eta,np.divide(Dwk,train.shape[0]-1)))
-        w[k]=np.subtract(w[k],momentum_w[k])
+        wt[k]=np.subtract(wt[k],momentum_w[k])
         
         Dbk = Dak
         momentum_b[k]=np.multiply(momentum_b[k],gamma)
         momentum_b[k]=np.add(momentum_b[k], np.multiply(eta,np.mean(Dbk,axis=0)))
-        b[k]=np.subtract(b[k], momentum_b[k])
+        bias[k]=np.subtract(bias[k], momentum_b[k])
         
         Dhk = np.matmul(Dak , np.transpose(wt[k]))
         Dak = np.multiply(Dhk,np.multiply(hs[k] , 1-hs[k]) )        
     
-    
-    return yhat
-
-
-
     return yhat
 
 # for i in range(10):
 #     yc=vanilla_grad_desc(num_hidden,sizes)
 
-gamma=0.9
-for i in range(3):
-    ycm=momentum_grad_desc(num_hidden,sizes,momentum,gamma)
-train[:,785]
+
 
 def csv_list(string):
    return [ int(i) for i in string.split(',')]
@@ -223,14 +214,18 @@ def main():
 
     train=np.asarray(train)
     test=np.asarray(test)
-
+    print("sizes",sizes)
     #np.random.shuffle(train)
     # np.random.shuffle(test)
 
     initwts()
 
-    for i in range(10):
-        yc=vanilla_grad_desc(num_hidden,sizes)
+    gamma=0.9
+    for i in range(3):
+        ycm=momentum_grad_desc(num_hidden,sizes,momentum,gamma)
+    train[:,785]
+    # for i in range(10):
+        # yc=vanilla_grad_desc(num_hidden,sizes)
 
 
 if __name__=="__main__":
