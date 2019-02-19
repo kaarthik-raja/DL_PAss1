@@ -42,7 +42,7 @@ def initwts():
     sizes=np.insert(sizes,0,784)
     sizes=np.append(sizes,10)
 
-    for n in range(num_hidden):
+    for n in range(num_hidden+1):
         w=np.random.rand(sizes[n],sizes[n+1])
         b=np.random.rand(sizes[n+1])  
         
@@ -51,10 +51,6 @@ def initwts():
         
         momentum_w.append(np.zeros((sizes[n],sizes[n+1])))
         momentum_b.append(np.zeros((sizes[n+1])))
-    w=np.random.rand(sizes[num_hidden],10)
-    b=np.random.rand(10)  
-    wt.append(w)
-    bias.append(b)
     
 
 
@@ -69,7 +65,7 @@ def initwts():
 
 
 # implementing functions to do different tasks. This is the main function block
-def vanilla_grad_desc(num_hidden,sizes):
+#def vanilla_grad_desc(num_hidden,sizes):
 
 # # implementing functions to do different tasks. This is the main function block
 # def vanilla_grad_desc(num_hidden,sizes):
@@ -113,7 +109,8 @@ def vanilla_grad_desc(num_hidden,sizes):
 #         Dak = np.multiply(Dhk,np.multiply(hs[k] , 1-hs[k]) )        
     
 #     return yhat
-    
+initwts() # to initialize weights before the program run
+
 def momentum_grad_desc(num_hidden,sizes,momentum,gamma):
     eta=0.1
     x=train[1:,1:785]
@@ -147,20 +144,23 @@ def momentum_grad_desc(num_hidden,sizes,momentum,gamma):
     Dak = yhat -  oneH
     #print(sizes)
     
-    for t in range(3):
-        for k in range(num_hidden,-1,-1):
-            Dwk= np.zeros((sizes[k],sizes[k+1]))
-            for i in range(train.shape[0]-1):
-                Dwk = np.add(Dwk,np.outer(hs[k][i],Dak[i]))
+    for k in range(num_hidden,-1,-1):
+        Dwk= np.zeros((sizes[k],sizes[k+1]))
+        for i in range(train.shape[0]-1):
+            Dwk = np.add(Dwk,np.outer(hs[k][i],Dak[i]))
 
-            wt[k] = wt[k] - eta * np.divide(Dwk,train.shape[0]-1) - gamma*prev_w[k]
-            prev_w[k]+=(np.divide(Dwk,train.shape[0]-1))
-            Dbk = Dak
-            bias[k] = bias[k] - eta * np.mean(Dbk,axis=0) - gamma*prev_b[k]
-            prev_b[k]+=np.mean(Dbk,axis=0)
-            Dhk = np.matmul(Dak , np.transpose(wt[k]))
-            Dak = np.multiply(Dhk,np.multiply(hs[k] , 1-hs[k]) )        
+        momentum_w[k]=np.multiply(momentum_w[k],gamma)
+        momentum_w[k]=np.add(momentum_w[k],np.multiply(eta,np.divide(Dwk,train.shape[0]-1)))
+        w[k]=np.subtract(w[k],momentum_w[k])
         
+        Dbk = Dak
+        momentum_b[k]=np.multiply(momentum_b[k],gamma)
+        momentum_b[k]=np.add(momentum_b[k], np.multiply(eta,np.mean(Dbk,axis=0)))
+        b[k]=np.subtract(b[k], momentum_b[k])
+        
+        Dhk = np.matmul(Dak , np.transpose(wt[k]))
+        Dak = np.multiply(Dhk,np.multiply(hs[k] , 1-hs[k]) )        
+    
     
     return yhat
 
