@@ -29,9 +29,9 @@ anneal=True
 
 #save paths
 save_dir=""
-train=""
-val=""
-test=""
+train_path=""
+valid_path=""
+test_path=""
 
 train=np.asarray(train)
 test=np.asarray(test)
@@ -55,16 +55,18 @@ wt=[] #list of weight matrices
 bias=[] #list of bias vectors
 
 def initwts():
-	for n in range(num_hidden):
-	    w=np.random.rand(sizes[n],sizes[n+1])
-	    b=np.random.rand(1,sizes[n+1])  
-	    wt.append(w)
-	    bias.append(b)
-	    
-	w=np.random.rand(sizes[num_hidden],10)
-	b=np.random.rand(10)  
-	wt.append(w)
-	bias.append(b)
+    for n in range(num_hidden):
+        w=np.random.rand(sizes[n],sizes[n+1])
+        b=np.random.rand(1,sizes[n+1])  
+        wt.append(w)
+        bias.append(b)
+        
+    w=np.random.rand(sizes[num_hidden],10)
+    b=np.random.rand(10)  
+    wt.append(w)
+    bias.append(b)
+
+initwts()
 
 def fgrad(hs):
     pass
@@ -80,6 +82,7 @@ def outputError(y,oneH):
 # implementing functions to do different tasks. This is the main function block
 def vanilla_grad_desc(num_hidden,sizes):
     eta=0.1
+    print(train.shape)
     x=train[1:,1:785]
     y=train[1:,785]
     hs=[]
@@ -125,27 +128,16 @@ def vanilla_grad_desc(num_hidden,sizes):
 # In[117]:
 
 
-#for i in range(10):
-#    yc=vanilla_grad_desc(num_hidden,sizes)
-
-a=np.array([1,2,3,4,0])
-b=np.arange(5)
-oneH = np.zeros((5,6))
-
-oneH[b,a]=1
-oneH
-if type(y[0]) is int:
-    
-    print( "hi")
-print(y[0])
+for i in range(10):
+    yc=vanilla_grad_desc(num_hidden,sizes)
 
 def main():
-	parser = agp.ArgumentParser()
-	parser.add_argument("--lr", type=float, help="the learning rate", default=0.01)
-	parser.add_argument("--momemtum", type=float, help="the momemtum in lr", default=0.5)
-	parser.add_argument("--num_hidden", type=int, help="the momemtum in lr", default=0.5)
-	parser.parse_args()
-	initwts()
+    parser = agp.ArgumentParser()
+    parser.add_argument("--lr", type=float, help="the learning rate", default=0.01)
+    parser.add_argument("--momemtum", type=float, help="the momemtum in lr", default=0.5)
+    parser.add_argument("--num_hidden", type=int, help="# of Hidden Layers", default= 3)
+    parser.add_argument("--sizes", type=int, help="# of Hidden Layers", default= 3)
+    parser.parse_args()
 
 if __name__=="__main__":
     main()
