@@ -82,19 +82,62 @@ b=np.random.rand(10)
 wt.append(w)
 bias.append(b)
 
-def fgrad(hs):
-    pass
+# def fgrad(hs):
+    # pass
 
-def fval(a):
-    pass
+# def fval(a):
+    # pass
 
-def outputError(y,oneH):
-    pass
+# def outputError(y,oneH):
+    # pass
 
 
 
-# implementing functions to do different tasks. This is the main function block
-def vanilla_grad_desc(num_hidden,sizes):
+# # implementing functions to do different tasks. This is the main function block
+# def vanilla_grad_desc(num_hidden,sizes):
+#     eta=0.1
+#     x=train[1:,1:785]
+#     y=train[1:,785]
+#     hs=[]
+#     # calculate the initial class out put from w and b initializations
+#     #for im in range(x.size[0]):
+    
+#     h=x
+#     hs.append(x)
+#     for n in range(num_hidden):
+#             a=np.add(np.matmul(h,wt[n]),bias[n])
+#             h=np.reciprocal(np.add(1,np.exp(-a)))
+#             hs.append(h)
+#     a=np.add(np.matmul(h,wt[num_hidden]),bias[num_hidden]) 
+    
+#     yhat= np.divide(np.exp(a),np.sum(np.exp(a)))
+    
+#     #for CEEF
+#     oneH = np.zeros((x.shape[0],10))
+    
+#     oneH[np.arange(x.shape[0]),y.astype(int)]=1
+    
+#     loss =  -np.mean(np.multiply( np.log(yhat) ,oneH))
+#     print("loss",loss)
+#     Dak = yhat -  oneH
+#     #print(sizes)
+#     for k in range(num_hidden,-1,-1):
+#         #print(k,"=k",hs[k].shape,Dak.shape)
+#         Dwk= np.zeros((sizes[k],sizes[k+1]))
+#         #print(Dwk.shape,hs[k][0].shape,Dak[0].shape,np.outer(hs[k][0],Dak[0]).shape)
+#         for i in range(train.shape[0]-1):
+#             Dwk = np.add(Dwk,np.outer(hs[k][i],Dak[i]))
+#         wt[k] = wt[k] - eta * np.divide(Dwk,train.shape[0]-1)
+#         #print("Dwk",Dwk)
+#         Dbk = Dak
+#         bias[k] = bias[k] - eta * np.mean(Dbk,axis=0)
+#         Dhk = np.matmul(Dak , np.transpose(wt[k]))
+#         Dak = np.multiply(Dhk,np.multiply(hs[k] , 1-hs[k]) )        
+    
+#     return yhat
+    
+
+def momentum_grad_desc(num_hidden,sizes,momentum,gamma):
     eta=0.1
     x=train[1:,1:785]
     y=train[1:,785]
@@ -121,33 +164,37 @@ def vanilla_grad_desc(num_hidden,sizes):
     print("loss",loss)
     Dak = yhat -  oneH
     #print(sizes)
+    prev_w=0
+    prev_b=0
     for k in range(num_hidden,-1,-1):
         #print(k,"=k",hs[k].shape,Dak.shape)
         Dwk= np.zeros((sizes[k],sizes[k+1]))
         #print(Dwk.shape,hs[k][0].shape,Dak[0].shape,np.outer(hs[k][0],Dak[0]).shape)
         for i in range(train.shape[0]-1):
             Dwk = np.add(Dwk,np.outer(hs[k][i],Dak[i]))
-        wt[k] = wt[k] - eta * np.divide(Dwk,train.shape[0]-1)
+
+        wt[k] = wt[k] - eta * np.divide(Dwk,train.shape[0]-1) - gamma*prev_w
         #print("Dwk",Dwk)
         Dbk = Dak
-        bias[k] = bias[k] - eta * np.mean(Dbk,axis=0)
+        bias[k] = bias[k] - eta * np.mean(Dbk,axis=0) - gamma*prev_b
+        prev_w += np.divide(Dwk,train.shape[0]-1)
+        prev_b += np.mean(Dbk, axis=0)
         Dhk = np.matmul(Dak , np.transpose(wt[k]))
         Dak = np.multiply(Dhk,np.multiply(hs[k] , 1-hs[k]) )        
     
     return yhat
-    
 
 
-# In[117]:
 
 
-for i in range(10):
-    yc=vanilla_grad_desc(num_hidden,sizes)
+# for i in range(10):
+#     yc=vanilla_grad_desc(num_hidden,sizes)
 
 
 # In[71]:
-
-
+gamma=0.9
+for i in range(3):
+    ycm=momentum_grad_desc(num_hidden,sizes,momentum,gamma)
 train[:,785]
 
 
@@ -172,8 +219,9 @@ print(y[0])
 np.shape(y)
 
 
-def main()
-
+def main():
+    pass
+        
 if __name__=="__main__":
     main()
     
