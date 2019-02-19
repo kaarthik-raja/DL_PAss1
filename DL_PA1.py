@@ -50,22 +50,28 @@ num_hidden=3
 sizes=np.asarray(sizes)
 sizes=np.insert(sizes,0,784)
 sizes=np.append(sizes,10)
-print(sizes)
+#print(sizes)
 wt=[] #list of weight matrices 
+momentum_w=[]
+adam_v=[]
 bias=[] #list of bias vectors
-
+momentum_b=[]
+adam_b=[]
 def initwts():
     for n in range(num_hidden):
         w=np.random.rand(sizes[n],sizes[n+1])
-        b=np.random.rand(1,sizes[n+1])  
+        b=np.random.rand(sizes[n+1])  
+        
         wt.append(w)
         bias.append(b)
         
+        momentum_w.append(np.zeros((sizes[n],sizes[n+1])))
+        momentum_b.append(np.zeros((sizes[n+1])))
     w=np.random.rand(sizes[num_hidden],10)
     b=np.random.rand(10)  
     wt.append(w)
     bias.append(b)
-
+    
 initwts()
 
 # def fgrad(hs):
@@ -122,7 +128,6 @@ initwts()
     
 #     return yhat
     
-
 def momentum_grad_desc(num_hidden,sizes,momentum,gamma):
     eta=0.1
     print(train.shape)
@@ -151,23 +156,21 @@ def momentum_grad_desc(num_hidden,sizes,momentum,gamma):
     print("loss",loss)
     Dak = yhat -  oneH
     #print(sizes)
-    prev_w=0
-    prev_b=0
-    for k in range(num_hidden,-1,-1):
-        #print(k,"=k",hs[k].shape,Dak.shape)
-        Dwk= np.zeros((sizes[k],sizes[k+1]))
-        #print(Dwk.shape,hs[k][0].shape,Dak[0].shape,np.outer(hs[k][0],Dak[0]).shape)
-        for i in range(train.shape[0]-1):
-            Dwk = np.add(Dwk,np.outer(hs[k][i],Dak[i]))
+    
+    for t in range(3):
+        for k in range(num_hidden,-1,-1):
+            Dwk= np.zeros((sizes[k],sizes[k+1]))
+            for i in range(train.shape[0]-1):
+                Dwk = np.add(Dwk,np.outer(hs[k][i],Dak[i]))
 
-        wt[k] = wt[k] - eta * np.divide(Dwk,train.shape[0]-1) - gamma*prev_w
-        #print("Dwk",Dwk)
-        Dbk = Dak
-        bias[k] = bias[k] - eta * np.mean(Dbk,axis=0) - gamma*prev_b
-        prev_w += np.divide(Dwk,train.shape[0]-1)
-        prev_b += np.mean(Dbk, axis=0)
-        Dhk = np.matmul(Dak , np.transpose(wt[k]))
-        Dak = np.multiply(Dhk,np.multiply(hs[k] , 1-hs[k]) )        
+            wt[k] = wt[k] - eta * np.divide(Dwk,train.shape[0]-1) - gamma*prev_w[k]
+            prev_w[k]+=(np.divide(Dwk,train.shape[0]-1))
+            Dbk = Dak
+            bias[k] = bias[k] - eta * np.mean(Dbk,axis=0) - gamma*prev_b[k]
+            prev_b[k]+=np.mean(Dbk,axis=0)
+            Dhk = np.matmul(Dak , np.transpose(wt[k]))
+            Dak = np.multiply(Dhk,np.multiply(hs[k] , 1-hs[k]) )        
+        
     
     return yhat
 
