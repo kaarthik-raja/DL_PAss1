@@ -61,9 +61,6 @@ def initwts():
     # pass
 
 
-# implementing functions to do different tasks. This is the main function block
-def vanilla_grad_desc(num_hidden,sizes):
-
 # # implementing functions to do different tasks. This is the main function block
 # def vanilla_grad_desc(num_hidden,sizes):
 #     eta=0.1
