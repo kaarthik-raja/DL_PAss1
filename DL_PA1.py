@@ -1,30 +1,19 @@
 #!/usr/bin/env python
 # coding: utf-8
-
-# In[1]:
-
-
 import numpy as np
 import pandas as pd 
 import matplotlib.pyplot as plt
 import argparse as agp
-
-
-# In[11]:
-
-
 import os 
+
 train_path=os.path.join("Data","train.csv")
 test_path=os.path.join("Data", "test.csv")
 valid_path=os.path.join("Data", "valid.csv")
 
-
-# In[12]:
-
-
 train=pd.read_csv(train_path)
 test=pd.read_csv(test_path)
 valid=pd.read_csv(valid_path)
+
 
 #create global variables
 lr= 0.01 # learning rate
@@ -37,29 +26,22 @@ opt= "adam" # optimizer
 batch_size=20 
 epochs=5
 anneal=True
+
 #save paths
 save_dir=""
 train=""
 val=""
 test=""
 
-# In[18]:
-
-
 train=np.asarray(train)
 test=np.asarray(test)
 
-
-# In[65]:
 
 
 #np.random.shuffle(train)
 # np.random.shuffle(test)
 sizes=np.array([10,15,20])
 np.append(sizes,10)
-
-
-# In[114]:
 
 
 #initialize weights and bias
@@ -71,16 +53,18 @@ sizes=np.append(sizes,10)
 print(sizes)
 wt=[] #list of weight matrices 
 bias=[] #list of bias vectors
-for n in range(num_hidden):
-    w=np.random.rand(sizes[n],sizes[n+1])
-    b=np.random.rand(1,sizes[n+1])  
-    wt.append(w)
-    bias.append(b)
-    
-w=np.random.rand(sizes[num_hidden],10)
-b=np.random.rand(10)  
-wt.append(w)
-bias.append(b)
+
+def initwts():
+	for n in range(num_hidden):
+	    w=np.random.rand(sizes[n],sizes[n+1])
+	    b=np.random.rand(1,sizes[n+1])  
+	    wt.append(w)
+	    bias.append(b)
+	    
+	w=np.random.rand(sizes[num_hidden],10)
+	b=np.random.rand(10)  
+	wt.append(w)
+	bias.append(b)
 
 def fgrad(hs):
     pass
@@ -141,18 +125,8 @@ def vanilla_grad_desc(num_hidden,sizes):
 # In[117]:
 
 
-for i in range(10):
-    yc=vanilla_grad_desc(num_hidden,sizes)
-
-
-# In[71]:
-
-
-train[:,785]
-
-
-# In[131]:
-
+#for i in range(10):
+#    yc=vanilla_grad_desc(num_hidden,sizes)
 
 a=np.array([1,2,3,4,0])
 b=np.arange(5)
@@ -165,14 +139,13 @@ if type(y[0]) is int:
     print( "hi")
 print(y[0])
 
-
-# In[129]:
-
-
-np.shape(y)
-
-
-def main()
+def main():
+	parser = agp.ArgumentParser()
+	parser.add_argument("--lr", type=float, help="the learning rate", default=0.01)
+	parser.add_argument("--momemtum", type=float, help="the momemtum in lr", default=0.5)
+	parser.add_argument("--num_hidden", type=int, help="the momemtum in lr", default=0.5)
+	parser.parse_args()
+	initwts()
 
 if __name__=="__main__":
     main()
