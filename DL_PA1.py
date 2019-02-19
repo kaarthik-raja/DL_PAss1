@@ -6,55 +6,39 @@ import matplotlib.pyplot as plt
 import argparse as agp
 import os 
 
-train_path=os.path.join("Data","train.csv")
-test_path=os.path.join("Data", "test.csv")
-valid_path=os.path.join("Data", "valid.csv")
-
-train=pd.read_csv(train_path)
-test=pd.read_csv(test_path)
-valid=pd.read_csv(valid_path)
 
 
 #create global variables
-lr= 0.01 # learning rate
-momentum=0.5 
-num_hidden=3 
-sizes=np.zeros(3)
-activation= "sigmoid"
-lossfn= "sq" 
-opt= "adam" # optimizer
-batch_size=20 
-epochs=5
-anneal=True
+# lr= 0.01 # learning rate
+# momentum=0.5 
+# num_hidden=3 
+# sizes=np.zeros(3)
+# activation= "sigmoid"
+# lossfn= "sq" 
+# opt= "adam" # optimizer
+# batch_size=20 
+# epochs=5
+# anneal=True
 
 #save paths
-save_dir=""
-train_path=""
-valid_path=""
-test_path=""
-
-train=np.asarray(train)
-test=np.asarray(test)
+# save_dir=""
+# train_path=""
+# valid_path=""
+# test_path=""
 
 
-
-#np.random.shuffle(train)
-# np.random.shuffle(test)
-sizes=np.array([10,15,20])
-np.append(sizes,10)
 
 
 #initialize weights and bias
-sizes=np.array([10,15,20])
-num_hidden=3
-sizes=np.asarray(sizes)
-sizes=np.insert(sizes,0,784)
-sizes=np.append(sizes,10)
-print(sizes)
 wt=[] #list of weight matrices 
 bias=[] #list of bias vectors
 
 def initwts():
+    global sizes
+    sizes=np.asarray(sizes)
+    sizes=np.insert(sizes,0,784)
+    sizes=np.append(sizes,10)
+
     for n in range(num_hidden):
         w=np.random.rand(sizes[n],sizes[n+1])
         b=np.random.rand(1,sizes[n+1])  
@@ -66,7 +50,6 @@ def initwts():
     wt.append(w)
     bias.append(b)
 
-initwts()
 
 def fgrad(hs):
     pass
@@ -78,11 +61,9 @@ def outputError(y,oneH):
     pass
 
 
-
 # implementing functions to do different tasks. This is the main function block
 def vanilla_grad_desc(num_hidden,sizes):
     eta=0.1
-    print(train.shape)
     x=train[1:,1:785]
     y=train[1:,785]
     hs=[]
@@ -90,6 +71,8 @@ def vanilla_grad_desc(num_hidden,sizes):
     #for im in range(x.size[0]):
     
     h=x
+
+    #forward Propagation
     hs.append(x)
     for n in range(num_hidden):
             a=np.add(np.matmul(h,wt[n]),bias[n])
@@ -106,8 +89,12 @@ def vanilla_grad_desc(num_hidden,sizes):
     
     loss =  -np.mean(np.multiply( np.log(yhat) ,oneH))
     print("loss",loss)
+    
+
+    #backward Propagation
     Dak = yhat -  oneH
     #print(sizes)
+
     for k in range(num_hidden,-1,-1):
         #print(k,"=k",hs[k].shape,Dak.shape)
         Dwk= np.zeros((sizes[k],sizes[k+1]))
@@ -120,24 +107,65 @@ def vanilla_grad_desc(num_hidden,sizes):
         bias[k] = bias[k] - eta * np.mean(Dbk,axis=0)
         Dhk = np.matmul(Dak , np.transpose(wt[k]))
         Dak = np.multiply(Dhk,np.multiply(hs[k] , 1-hs[k]) )        
-    
+
     return yhat
     
+def csv_list(string):
+   return [ int(i) for i in string.split(',')]
 
-
-# In[117]:
-
-
-for i in range(10):
-    yc=vanilla_grad_desc(num_hidden,sizes)
+def annealf(string):
+    if string in ["true","True","T","t","1" ] :
+        return True
+    elif string in ["False","false","F","f","0"]:
+        return False
 
 def main():
+    global lr,momentum,num_hidden,sizes,activation,loss,opt,batch_size,epoch,anneal,save_dir,expt_dir,train_path,test_path,valid_path
+    global train,test,valid
+    print("parsing...")
     parser = agp.ArgumentParser()
     parser.add_argument("--lr", type=float, help="the learning rate", default=0.01)
-    parser.add_argument("--momemtum", type=float, help="the momemtum in lr", default=0.5)
+    parser.add_argument("--momentum", type=float, help="the momentum in lr", default=0.5)
     parser.add_argument("--num_hidden", type=int, help="# of Hidden Layers", default= 3)
-    parser.add_argument("--sizes", type=int, help="# of Hidden Layers", default= 3)
-    parser.parse_args()
+    parser.add_argument("--sizes", type=csv_list, help="# of Nodes per H_Layer", default= [100,100,100])
+    parser.add_argument("--activation", type=str, help="activation function", default= "sigmoid", choices=["sigmoid","tanh"])
+    parser.add_argument("--loss", type=str, help="loss function", default= "ce", choices=["sq","ce"])
+    parser.add_argument("--opt", type=str, help="optimizer", default= "gd", choices=["gd","momentum","nag","adam"])
+    parser.add_argument("--batch_size", type=int, help="batch size per step", default= 20)
+    parser.add_argument("--epoch", type=int, help="# of EPOCHs", default= 5)
+    parser.add_argument("--anneal", type=annealf, help="anneal", default= True,choices=[True,False])
+    parser.add_argument("--save_dir", type=str, help="Save dir location", default= "pa1")
+    parser.add_argument("--expt_dir", type=str, help="expt_dir location", default= os.path.join("pa1","exp1"))
+    parser.add_argument("--train", type=str, help="train file location", default= os.path.join("Data","train.csv"))
+    parser.add_argument("--test", type=str, help="test file location", default= os.path.join("Data","test.csv"))
+    parser.add_argument("--validation", type=str, help="validation file location", default= os.path.join("Data","valid.csv"))
+    args=parser.parse_args()
+
+    lr,momentum=args.lr,args.momentum
+    num_hidden,sizes=args.num_hidden,args.sizes
+    activation,loss,opt=args.activation,args.loss,args.opt
+    batch_size,epoch=args.batch_size,args.epoch
+    anneal=args.anneal
+    save_dir,expt_dir=args.save_dir,args.expt_dir
+    train_path=args.train
+    test_path=args.test
+    valid_path=args.validation
+
+    train=pd.read_csv(train_path)
+    test=pd.read_csv(test_path)
+    valid=pd.read_csv(valid_path)
+
+    train=np.asarray(train)
+    test=np.asarray(test)
+
+    #np.random.shuffle(train)
+    # np.random.shuffle(test)
+
+    initwts()
+
+    for i in range(10):
+        yc=vanilla_grad_desc(num_hidden,sizes)
+
 
 if __name__=="__main__":
     main()
