@@ -44,8 +44,8 @@ def initwts():
     sizes=np.append(sizes,10)
 
     for n in range(num_hidden+1):
-        w=np.random.rand(sizes[n],sizes[n+1])
-        b=np.random.rand(sizes[n+1])  
+        w=np.multiply(np.random.randn(sizes[n],sizes[n+1]),np.sqrt(np.divide(1,sizes[n]+sizes[n+1])))
+        b=np.random.randn(sizes[n+1])  
         
         wt.append(w)
         bias.append(b)
@@ -69,7 +69,7 @@ def initwts():
 #def vanilla_grad_desc(num_hidden,sizes):
 
  # implementing functions to do different tasks. This is the main function block
- def vanilla_grad_desc(num_hidden,sizes):
+def vanilla_grad_desc(num_hidden,sizes):
      eta=0.1
      x=train[1:,1:785]
      y=train[1:,785]
@@ -106,7 +106,7 @@ def initwts():
          #print("Dwk",Dwk)
          Dbk = Dak
          bias[k] = bias[k] - eta * np.mean(Dbk,axis=0)
-        Dhk = np.matmul(Dak , np.transpose(wt[k]))
+         Dhk = np.matmul(Dak , np.transpose(wt[k]))
          Dak = np.multiply(Dhk,np.multiply(hs[k] , 1-hs[k]) )        
     
      return yhat
@@ -160,11 +160,11 @@ def momentum_grad_desc(num_hidden,sizes,momentum,gamma):
         
         Dhk = np.matmul(Dak , np.transpose(wt[k]))
         Dak = np.multiply(Dhk,np.multiply(hs[k] , 1-hs[k]) )        
-    
+        
     return yhat
 
- for i in range(10):
-     yc=vanilla_grad_desc(num_hidden,sizes)
+#for i in range(10):
+#     yc=vanilla_grad_desc(num_hidden,sizes)
 
 
 
