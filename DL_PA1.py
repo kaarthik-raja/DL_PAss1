@@ -40,7 +40,6 @@ bias=[] #list of bias vectors
 momentum_w=[]
 momentum_b=[]
 
-
 look_w=[]
 look_b=[]
 update_w=[]
@@ -57,8 +56,10 @@ def initwts():
     sizes=np.append(sizes,10)
 
     for n in range(num_hidden+1):
-        w=np.divide(np.subtract(np.random.rand(sizes[n],sizes[n+1]),0.8),1000000)
-        b=np.divide(np.subtract(np.random.rand(sizes[n+1]),0.5),100)  
+        # w=np.divide(np.subtract(np.random.rand(sizes[n],sizes[n+1]),0.8),1000000)
+        # b=np.divide(np.subtract(np.random.rand(sizes[n+1]),0.5),100)  
+        w=np.multiply(np.random.randn(sizes[n],sizes[n+1]),np.sqrt(np.divide(1,sizes[n]+sizes[n+1])))
+        b=np.random.randn(sizes[n+1])  
         
         wt.append(w)
         bias.append(b)
@@ -122,48 +123,48 @@ def optimizer(k,Dwk,Dbk):
 # implementing functions to do different tasks. This is the main function block
 #def vanilla_grad_desc(num_hidden,sizes):
 
-# # implementing functions to do different tasks. This is the main function block
-# def vanilla_grad_desc(num_hidden,sizes):
-#     eta=0.1
-#     x=train[1:,1:785]
-#     y=train[1:,785]
-#     hs=[]
-#     # calculate the initial class out put from w and b initializations
-#     #for im in range(x.size[0]):
+ # implementing functions to do different tasks. This is the main function block
+def vanilla_grad_desc(num_hidden,sizes):
+     eta=0.1
+     x=train[1:,1:785]
+     y=train[1:,785]
+     hs=[]
+     # calculate the initial class out put from w and b initializations
+     #for im in range(x.size[0]):
     
-#     h=x
-#     hs.append(x)
-#     for n in range(num_hidden):
-#             a=np.add(np.matmul(h,wt[n]),bias[n])
-#             h=np.reciprocal(np.add(1,np.exp(-a)))
-#             hs.append(h)
-#     a=np.add(np.matmul(h,wt[num_hidden]),bias[num_hidden]) 
+     h=x
+     hs.append(x)
+     for n in range(num_hidden):
+             a=np.add(np.matmul(h,wt[n]),bias[n])
+             h=np.reciprocal(np.add(1,np.exp(-a)))
+             hs.append(h)
+     a=np.add(np.matmul(h,wt[num_hidden]),bias[num_hidden]) 
     
-#     yhat= np.divide(np.exp(a),np.sum(np.exp(a)))
+     yhat= np.divide(np.exp(a),np.sum(np.exp(a)))
     
-#     #for CEEF
-#     oneH = np.zeros((x.shape[0],10))
+     #for CEEF
+     oneH = np.zeros((x.shape[0],10))
     
-#     oneH[np.arange(x.shape[0]),y.astype(int)]=1
+     oneH[np.arange(x.shape[0]),y.astype(int)]=1
     
-#     loss =  -np.mean(np.multiply( np.log(yhat) ,oneH))
-#     print("loss",loss)
-#     Dak = yhat -  oneH
-#     #print(sizes)
-#     for k in range(num_hidden,-1,-1):
-#         #print(k,"=k",hs[k].shape,Dak.shape)
-#         Dwk= np.zeros((sizes[k],sizes[k+1]))
-#         #print(Dwk.shape,hs[k][0].shape,Dak[0].shape,np.outer(hs[k][0],Dak[0]).shape)
-#         for i in range(train.shape[0]-1):
-#             Dwk = np.add(Dwk,np.outer(hs[k][i],Dak[i]))
-#         wt[k] = wt[k] - eta * np.divide(Dwk,train.shape[0]-1)
-#         #print("Dwk",Dwk)
-#         Dbk = Dak
-#         bias[k] = bias[k] - eta * np.mean(Dbk,axis=0)
-#         Dhk = np.matmul(Dak , np.transpose(wt[k]))
-#         Dak = np.multiply(Dhk,np.multiply(hs[k] , 1-hs[k]) )        
+     loss =  -np.mean(np.multiply( np.log(yhat) ,oneH))
+     print("loss",loss)
+     Dak = yhat -  oneH
+     #print(sizes)
+     for k in range(num_hidden,-1,-1):
+         #print(k,"=k",hs[k].shape,Dak.shape)
+         Dwk= np.zeros((sizes[k],sizes[k+1]))
+         #print(Dwk.shape,hs[k][0].shape,Dak[0].shape,np.outer(hs[k][0],Dak[0]).shape)
+         for i in range(train.shape[0]-1):
+             Dwk = np.add(Dwk,np.outer(hs[k][i],Dak[i]))
+         wt[k] = wt[k] - eta * np.divide(Dwk,train.shape[0]-1)
+         #print("Dwk",Dwk)
+         Dbk = Dak
+         bias[k] = bias[k] - eta * np.mean(Dbk,axis=0)
+         Dhk = np.matmul(Dak , np.transpose(wt[k]))
+         Dak = np.multiply(Dhk,np.multiply(hs[k] , 1-hs[k]) )        
     
-#     return yhat
+     return yhat
 
 def momentum_grad_desc(num_hidden,sizes,momentum,gamma):
     eta=0.1
@@ -215,7 +216,6 @@ def momentum_grad_desc(num_hidden,sizes,momentum,gamma):
         Dbk = np.mean(Dbk,axis=0)
         optimizer(k,Dwk,Dbk)
         Dhk = np.matmul(Dak , np.transpose(wt[k]))
-        # print("Dhk",Dhk[1,1:4])
 
         Dak = np.multiply(Dhk,  fgrad(hs[k]) )       
         
