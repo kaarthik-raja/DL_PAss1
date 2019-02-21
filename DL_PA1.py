@@ -26,16 +26,30 @@ import os
 # valid_path=""
 # test_path=""
 
-
-
-
+gamma=0.9
+eta=10
+adam_b1=0.9
+adam_bp1=0.9
+adam_b2=0.999
+adam_bp2=0.999
+adam_epsilon= 3
 #initialize weights and bias
 wt=[] #list of weight matrices 
-momentum_w=[]
-adam_v=[]
 bias=[] #list of bias vectors
+
+momentum_w=[]
 momentum_b=[]
-adam_b=[]
+
+
+look_w=[]
+look_b=[]
+update_w=[]
+update_b=[]
+
+adam_w_m=[]
+adam_w_v=[]
+adam_b_m=[]
+adam_b_v=[]
 def initwts():
     global sizes
     sizes=np.asarray(sizes)
@@ -43,26 +57,67 @@ def initwts():
     sizes=np.append(sizes,10)
 
     for n in range(num_hidden+1):
-        w=np.random.rand(sizes[n],sizes[n+1])
-        b=np.random.rand(sizes[n+1])  
+        w=np.divide(np.subtract(np.random.rand(sizes[n],sizes[n+1]),0.8),1000000)
+        b=np.divide(np.subtract(np.random.rand(sizes[n+1]),0.5),100)  
         
         wt.append(w)
         bias.append(b)
-        
-        momentum_w.append(np.zeros((sizes[n],sizes[n+1])))
-        momentum_b.append(np.zeros((sizes[n+1])))
-    
+        if opt =="momentum":
+            momentum_w.append(np.zeros((sizes[n],sizes[n+1])))
+            momentum_b.append(np.zeros((sizes[n+1])))
+        elif opt == "nag":
+            look_w.append(w)
+            look_b.append(b)
+            update_w.append(np.zeros((sizes[n],sizes[n+1])))
+            update_b.append(np.zeros((sizes[n+1])))
+        elif opt == "adam":
+            adam_w_m.append(np.zeros((sizes[n],sizes[n+1])))
+            adam_w_v.append(np.zeros((sizes[n],sizes[n+1])))
+            adam_b_m.append(np.zeros((sizes[n+1])))
+            adam_b_v.append(np.zeros((sizes[n+1])))
 
+def fgrad(hs):
+    if activation == "sigmoid":
+        return np.multiply(hs,1-hs)
+    else:
+        return np.subtract(1,np.multiply(hs , hs))
 
-# def fgrad(hs):
-    # pass
-
-# def fval(a):
-    # pass
+def fval(a):
+    if activation == "sigmoid":
+        return np.reciprocal(np.add(1,np.exp(-a)))
+    else:
+        return np.multiply(np.subtract(np.exp(a),np.exp(-a)),np.reciprocal( np.add(np.exp(a),np.exp(-a)) ) )
 
 # def outputError(y,oneH):
     # pass
-
+def optimizer(k,Dwk,Dbk):
+    global wt,bias,momentum_w,momentum_b
+    print("optimizer",opt,k,Dwk[1,1:4])
+    if opt == "gd":
+        wt[k]=np.subtract(wt[k],np.multiply(eta,Dwk))
+        bias[k]=np.subtract(bias[k],np.multiply(eta,Dbk))
+    elif opt == "momentum":
+        momentum_w[k]=np.multiply(momentum_w[k],gamma)
+        momentum_w[k]=np.add(momentum_w[k],np.multiply(eta,Dwk))
+        wt[k]=np.subtract(wt[k],momentum_w[k])        
+        momentum_b[k]=np.multiply(momentum_b[k],gamma)
+        momentum_b[k]=np.add(momentum_b[k], np.multiply(eta,Dbk))
+        bias[k]=np.subtract(bias[k], momentum_b[k])
+    elif opt == "nag":
+        update_w[k]= np.sum( np.multiply(gamma,update_w[k]),np.multiply(eta,Dwk) )
+        look_w[k]= np.subtract(look_w[k],update_w[k])
+        update_b[k]= np.sum( np.multiply(gamma,update_b[k]),np.multiply(eta,Dbk) )
+        look_b[k]= np.subtract(look_b[k],update_b[k])
+    elif opt == "adam":
+        adam_w_m = np.add(np.multiply(adam_b1,adam_w_m),np.multiply(1-adam_b1,Dwk))
+        adam_b_m = np.add(np.multiply(adam_b1,adam_b_m),np.multiply(1-adam_b1,Dbk))
+        
+        adam_w_v = np.add(np.multiply(adam_b2,adam_w_v),np.multiply(1-adam_b2,np.multiply(Dwk,Dwk)))
+        adam_b_v = np.add(np.multiply(adam_b2,adam_b_v),np.multiply(1-adam_b2,np.multiply(Dbk,Dbk)))
+        
+        wt[k] = np.subtract(wt[k],np.multiply( np.multiply(eta, np.reciprocal( np.sqrt( np.add( np.divide(adam_w_v,1-adam_bp2) ,adam_epsilon) )) ), np.divide(adam_w_m,1-adam_bp1) ) )
+        bias[k] = np.subtract(bias[k],np.multiply( np.multiply(eta, np.reciprocal( np.sqrt( np.add( np.divide(adam_b_v,1-adam_bp2) ,adam_epsilon) )) ), np.divide(adam_b_m,1-adam_bp1) ) )
+        
 
 # implementing functions to do different tasks. This is the main function block
 #def vanilla_grad_desc(num_hidden,sizes):
@@ -119,12 +174,16 @@ def momentum_grad_desc(num_hidden,sizes,momentum,gamma):
     #for im in range(x.size[0]):
     
     h=x
+    hs.append(x)
+    
+    #if opt == "nag":
+    #    wt[k] = np.subtract(look_w[k],np.multiply(gamma,update_w[k]) )
+    #    bias[k] = np.subtract(look_b[k],np.multiply(gamma,update_b[k]) )
 
     #forward Propagation
-    hs.append(x)
     for n in range(num_hidden):
             a=np.add(np.matmul(h,wt[n]),bias[n])
-            h=np.reciprocal(np.add(1,np.exp(-a)))
+            h=fval(a)
             hs.append(h)
     a=np.add(np.matmul(h,wt[num_hidden]),bias[num_hidden]) 
     
@@ -147,25 +206,26 @@ def momentum_grad_desc(num_hidden,sizes,momentum,gamma):
         Dwk= np.zeros((sizes[k],sizes[k+1]))
         for i in range(train.shape[0]-1):
             Dwk = np.add(Dwk,np.outer(hs[k][i],Dak[i]))
+        # print("hs_Dak_Dwk",hs[k].shape,Dak.shape,Dwk.shape)
+        # print("hs_Dak_Dwk",hs[k][4,10:20],Dak[1,1:4],Dwk[1:4,1:4])
 
-        momentum_w[k]=np.multiply(momentum_w[k],gamma)
-        momentum_w[k]=np.add(momentum_w[k],np.multiply(eta,np.divide(Dwk,train.shape[0]-1)))
-        wt[k]=np.subtract(wt[k],momentum_w[k])
-        
+
+        Dwk = np.divide(Dwk,train.shape[0]-1)
         Dbk = Dak
-        momentum_b[k]=np.multiply(momentum_b[k],gamma)
-        momentum_b[k]=np.add(momentum_b[k], np.multiply(eta,np.mean(Dbk,axis=0)))
-        bias[k]=np.subtract(bias[k], momentum_b[k])
-        
+        Dbk = np.mean(Dbk,axis=0)
+        optimizer(k,Dwk,Dbk)
         Dhk = np.matmul(Dak , np.transpose(wt[k]))
-        Dak = np.multiply(Dhk,np.multiply(hs[k] , 1-hs[k]) )        
+        # print("Dhk",Dhk[1,1:4])
+
+        Dak = np.multiply(Dhk,  fgrad(hs[k]) )       
+        
+        print("fgrad",fgrad(hs[k])[1,1:4])
+        # print("Dak",Dak[1,1:4])
     
+    if opt == "adam":
+        adam_bp1=adam_bp1*adam_b1
+        adam_bp2=adam_bp2*adam_b2
     return yhat
-
-# for i in range(10):
-#     yc=vanilla_grad_desc(num_hidden,sizes)
-
-
 
 def csv_list(string):
    return [ int(i) for i in string.split(',')]
@@ -209,6 +269,7 @@ def main():
     valid_path=args.validation
 
     train=pd.read_csv(train_path)
+    print(train.values)
     test=pd.read_csv(test_path)
     valid=pd.read_csv(valid_path)
 
@@ -219,11 +280,9 @@ def main():
     # np.random.shuffle(test)
 
     initwts()
-
     gamma=0.9
     for i in range(3):
         ycm=momentum_grad_desc(num_hidden,sizes,momentum,gamma)
-    train[:,785]
     # for i in range(10):
         # yc=vanilla_grad_desc(num_hidden,sizes)
 
