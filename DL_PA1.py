@@ -37,6 +37,8 @@ bias=[] #list of bias vectors
 momentum_b=[]
 adam_b=[]
 gamma= 0.9 #default gamma for momentum and nag
+batch_size=50 # for batch gradient descent
+np.random.seed(1234)
 def initwts():
     global sizes
     sizes=np.asarray(sizes)
@@ -69,10 +71,10 @@ def initwts():
 #def vanilla_grad_desc(num_hidden,sizes):
 
  # implementing functions to do different tasks. This is the main function block
+ 
 def vanilla_grad_desc(num_hidden,sizes):
      eta=0.1
-     x=train[1:,1:785]
-     y=train[1:,785]
+     # x and y are initialized right after getting train data
      hs=[]
      # calculate the initial class out put from w and b initializations
      #for im in range(x.size[0]):
@@ -111,56 +113,74 @@ def vanilla_grad_desc(num_hidden,sizes):
     
      return yhat
 
+#creating mini batches 
+
+def mini_batches(train,batch_size):
+    np.random.shuffle(train)
+    x=train[0:,1:785]
+    y=train[0:,785]
+    x_batch=[]
+    y_batch=[]
+    for i in range(int(np.divide((x.shape[0]),batch_size))+1):
+        x_temp=x[i:batch_size*(i+1),:]
+        y_temp=y[i:batch_size*(i+1)]
+        x_batch.append(x_temp)
+        y_batch.append(y_temp)
+    return x_batch,y_batch,x,y
+
+        
+
 def momentum_grad_desc(num_hidden,sizes,momentum,gamma):
     eta=0.1
-    x=train[1:,1:785]
-    y=train[1:,785]
-    hs=[]
-    # calculate the initial class out put from w and b initializations
-    #for im in range(x.size[0]):
+    x_l,y_l,x,y=mini_batches(train,batch_size) # list of batches of x aand y
     
-    h=x
-
-    #forward Propagation
-    hs.append(x)
-    for n in range(num_hidden):
-            a=np.add(np.matmul(h,wt[n]),bias[n])
-            h=np.reciprocal(np.add(1,np.exp(-a)))
-            hs.append(h)
-    a=np.add(np.matmul(h,wt[num_hidden]),bias[num_hidden]) 
-    
-    yhat= np.divide(np.exp(a),np.sum(np.exp(a)))
-    
-    #for CEEF
-    oneH = np.zeros((x.shape[0],10))
-    
-    oneH[np.arange(x.shape[0]),y.astype(int)]=1
-    
-    loss =  -np.mean(np.multiply( np.log(yhat) ,oneH))
-    print("loss",loss)
-    
-
-    #backward Propagation
-    Dak = yhat -  oneH
-    #print(sizes)
-    
-    for k in range(num_hidden,-1,-1):
-        Dwk= np.zeros((sizes[k],sizes[k+1]))
-        for i in range(train.shape[0]-1):
-            Dwk = np.add(Dwk,np.outer(hs[k][i],Dak[i]))
-
-        momentum_w[k]=np.multiply(momentum_w[k],gamma)
-        momentum_w[k]=np.add(momentum_w[k],np.multiply(eta,np.divide(Dwk,train.shape[0]-1)))
-        wt[k]=np.subtract(wt[k],momentum_w[k])
+    for b in range(int(np.divide(x.shape[0],batch_size))+1):   
+        hs=[]
+        # calculate the initial class out put from w and b initializations
+        #for im in range(x.size[0]):
         
-        Dbk = Dak
-        momentum_b[k]=np.multiply(momentum_b[k],gamma)
-        momentum_b[k]=np.add(momentum_b[k], np.multiply(eta,np.mean(Dbk,axis=0)))
-        bias[k]=np.subtract(bias[k], momentum_b[k])
+        h=x_l[b]
+    
+        #forward Propagation
+        hs.append(x_l[b])
         
-        Dhk = np.matmul(Dak , np.transpose(wt[k]))
-        Dak = np.multiply(Dhk,np.multiply(hs[k] , 1-hs[k]) )        
+        for n in range(num_hidden):
+                a=np.add(np.matmul(h,wt[n]),bias[n])
+                h=np.reciprocal(np.add(1,np.exp(-a)))
+                hs.append(h)
+        a=np.add(np.matmul(h,wt[num_hidden]),bias[num_hidden]) 
         
+        yhat= np.divide(np.exp(a),np.sum(np.exp(a),axis=0))
+        
+        #for CEEF
+        oneH = np.zeros((x_l[b].shape[0],10))
+        
+        oneH[np.arange(x_l[b].shape[0]),y_l[b].astype(int)]=1
+        
+#        loss =  -np.mean(np.multiply( np.log(yhat) ,oneH))
+#        print("loss",loss)      
+
+        #backward Propagation
+        Dak = yhat -  oneH
+        #print(sizes)
+        
+        for k in range(num_hidden,-1,-1):
+            Dwk= np.zeros((sizes[k],sizes[k+1]))
+            for i in range(x_l[b].shape[0]-1):
+                Dwk = np.add(Dwk,np.outer(hs[k][i],Dak[i]))
+    
+            momentum_w[k]=np.multiply(momentum_w[k],gamma)
+            momentum_w[k]=np.add(momentum_w[k],np.multiply(eta,np.divide(Dwk,x_l[b].shape[0]-1)))
+            wt[k]=np.subtract(wt[k],momentum_w[k])
+            
+            Dbk = Dak
+            momentum_b[k]=np.multiply(momentum_b[k],gamma)
+            momentum_b[k]=np.add(momentum_b[k], np.multiply(eta,np.mean(Dbk,axis=0)))
+            bias[k]=np.subtract(bias[k], momentum_b[k])
+            
+            Dhk = np.matmul(Dak , np.transpose(wt[k]))
+            Dak = np.multiply(Dhk,np.multiply(hs[k] , 1-hs[k]) )        
+            
     return yhat
 
 #for i in range(10):
@@ -213,18 +233,31 @@ def main():
     test=pd.read_csv(test_path)
     valid=pd.read_csv(valid_path)
 
-    train=np.asarray(train)
-    test=np.asarray(test)
-    print("sizes",sizes)
+    train=train.values
+    test=test.values
+    valid=valid.values
+   
+    #print("sizes",sizes)
     #np.random.shuffle(train)
     # np.random.shuffle(test)
 
     initwts()
 
     gamma=0.9
-    for i in range(3):
+    num_epochs=3
+    
+    for i in range(num_epochs):
         ycm=momentum_grad_desc(num_hidden,sizes,momentum,gamma)
-    train[:,785]
+        #for CEEF
+        xl,yl,x,y=mini_batches(train,batch_size)
+        oneH = np.zeros((x.shape[0],10))
+        
+        oneH[np.arange(x.shape[0]),y.astype(int)]=1
+        
+        loss =  -np.mean(np.multiply( np.log(ycm) ,oneH))
+        print("loss in epoch " + num_epochs + " is " + loss)
+        
+
     # for i in range(10):
         # yc=vanilla_grad_desc(num_hidden,sizes)
 
