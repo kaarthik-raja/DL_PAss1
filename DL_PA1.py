@@ -7,7 +7,7 @@ import argparse as agp
 import os 
 from collections import Counter as freq_ 
 from sklearn.decomposition import PCA
-    
+	
 
 # np.random.seed(0) #Dont seed for actualy random values
 #create global variables
@@ -30,12 +30,12 @@ from sklearn.decomposition import PCA
 #set random seed for replicability of results
 np.random.seed(1234)
 gamma=0.9
-eta=0.1
+eta=0.001
 adam_b1=0.9
 adam_bp1=0.9
 adam_b2=0.999
 adam_bp2=0.999
-adam_epsilon= 3
+adam_epsilon= 0.0000001
 #initialize weights and bias
 wt=[] #list of weight matrices 
 bias=[] #list of bias vectors
@@ -81,19 +81,19 @@ def initwts():
 			adam_b_v.append(np.zeros((sizes[n+1])))
 
 def fgrad(hs):
-    if activation == "sigmoid":
-        return np.multiply(hs,1-hs)
-    else:
-        return np.subtract(1,np.multiply(hs , hs))
+	if activation == "sigmoid":
+		return np.multiply(hs,1-hs)
+	else:
+		return np.subtract(1,np.multiply(hs , hs))
 
 def fval(a):
-    if activation == "sigmoid":
-        return np.reciprocal(np.add(1,np.exp(np.negative(a) )))
-    else:
-        return np.multiply(np.subtract(np.exp(a),np.exp( np.negative(a) )),np.reciprocal( np.add(np.exp(a),np.exp( np.negative(a) )) ) )
+	if activation == "sigmoid":
+		return np.reciprocal(np.add(1,np.exp(np.negative(a) )))
+	else:
+		return np.multiply(np.subtract(np.exp(a),np.exp( np.negative(a) )),np.reciprocal( np.add(np.exp(a),np.exp( np.negative(a) )) ) )
 
 # def outputError(y,oneH):
-    # pass
+	# pass
 def optimizer(k,Dwk,Dbk):
 	global wt,bias,momentum_w,momentum_b
 	# print("optimizer",opt,k,Dwk[1,1:4])
@@ -194,10 +194,10 @@ def csv_list(string):
    return [ int(i) for i in string.split(',')]
 
 def annealf(string):
-    if string in ["true","True","T","t","1" ] :
-        return True
-    elif string in ["False","false","F","f","0"]:
-        return False
+	if string in ["true","True","T","t","1" ] :
+		return True
+	elif string in ["False","false","F","f","0"]:
+		return False
 
 def main():
 	global lr,momentum,num_hidden,sizes,activation,loss,opt,batch_size,epoch,anneal,save_dir,expt_dir,train_path,test_path,valid_path
@@ -241,15 +241,14 @@ def main():
 
 	# train=train.values
 
-    train=train.as_matrix()
-    x=train[:,0:785]
-    y=train[:,785]
-    pca=PCA(n_components=350)
-
-
-    x=pca.fit_transform(x)
-    yn = y.reshape(55000,1)
-    train=  np.hstack((x,yn))
+	train=train.as_matrix()
+	x=train[:,0:785]
+	y=train[:,785]
+	pca=PCA(n_components=350)
+	pcamod=pca.fit(x) #pickle this to use it on test data
+	x=pcamod.transform(x)
+	yn = y.reshape(55000,1)
+	train=  np.hstack((x,yn))
 
 	# test=np.divide(np.subtract(test.values.astype(float),127),128)
 	# valid=np.divide(np.subtract(valid.values.astype(float),127),128)
@@ -276,8 +275,8 @@ def main():
 	plt.pyplot(iii,nofc)
 
 if __name__=="__main__":
-    main()
-    
+	main()
+	
 
 
 
