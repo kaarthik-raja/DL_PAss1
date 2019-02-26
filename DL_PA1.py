@@ -188,6 +188,17 @@ def annealf(string):
 	elif string in ["False","false","F","f","0"]:
 		return False
 
+def logfile(expt_dir,log_type): #log_type: log_train.txt/log_validation.txt depending upon the data used
+    f_location='%s%s' %(expt_dir,log_type)
+    f=open(f_location , 'w+')
+    f.write(" Epoch : %d , Step : %d , Loss : %d , Error: %d , lr :%d" %(iii,step,gloss,(55000-nofc[iii]),eta))
+    f.close()    
+
+def testprediction(expt_dir):
+    pass
+
+
+
 def main():
 	global lr,momentum,num_hidden,sizes,activation,loss,opt,batch_size,epoch,anneal,save_dir,expt_dir,train_path,test_path,valid_path
 	global train,test,valid
@@ -247,14 +258,17 @@ def main():
 	# np.random.shuffle(test)
 
 	initwts()
-	nofc=np.zeros(5000)
-
+	nofc=np.zeros(500)
+    step=0 # update step for printing loss
 	for iii in range(5000):
 		np.random.shuffle(train)
 		freqClass = np.zeros(10)
 		gloss=0
 		for jj in range(10):
 			# print(jj,end=" ")
+            step=step+1
+            if(step%100==0):
+                logfile(expt_dir,"log_train.txt")
 			mini = train[jj*batch_size:(jj+1)*batch_size,:]
 			ycm=grad_desc()
 		print("\n ",iii,nofc[iii],freqClass.astype(int),gloss)
