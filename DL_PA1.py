@@ -7,7 +7,7 @@ import argparse as agp
 import os 
 from collections import Counter as freq_ 
 
-
+# np.random.seed(0) #Dont seed for actualy random values
 #create global variables
 # lr= 0.01 # learning rate
 # momentum=0.5 
@@ -27,7 +27,7 @@ from collections import Counter as freq_
 # test_path=""
 
 gamma=0.9
-eta=0.00001
+eta=0.01
 adam_b1=0.9
 adam_bp1=0.9
 adam_b2=0.999
@@ -54,13 +54,13 @@ def initwts():
 	global sizes
 	sizes=np.asarray(sizes)
 	sizes=np.insert(sizes,0,784)
-	sizes=np.append(sizes,10)
+	sizes=np.append(sizes,10).astype(int)
 
 	for n in range(num_hidden+1):
-		# w=np.multiply(np.random.randn(sizes[n],sizes[n+1]),np.sqrt(np.divide(1,sizes[n]+sizes[n+1])))
-		# b=np.random.randn(sizes[n+1])  
-		w= np.subtract(np.random.rand(sizes[n],sizes[n+1]),0.5)
-		b= np.subtract(np.random.rand(sizes[n+1]),0.5)
+		w=np.random.randn(sizes[n],sizes[n+1])/np.sqrt(sizes[n]+sizes[n+1])
+		b=np.random.randn( sizes[n+1] )  
+		# w= np.subtract(np.multiply( np.random.rand(sizes[n],sizes[n+1]),2),1)
+		# b= np.subtract(np.random.rand(sizes[n+1]),0.5)
 		wt.append(w)
 		bias.append(b)
 		if opt =="momentum":
@@ -123,6 +123,7 @@ def optimizer(k,Dwk,Dbk):
 # implementing functions to do different tasks. This is the main function block
 #def vanilla_grad_desc(num_hidden,sizes):
 def grad_desc():
+	global freqClass,gloss
 	x=mini[0:,1:785]
 	x=np.divide(np.subtract(x.astype(float),127),128)
 	y=mini[0:,785]
@@ -142,30 +143,25 @@ def grad_desc():
 			hs.append(h)
 
 	a=np.add(np.matmul(h,wt[num_hidden]),bias[num_hidden]) 
-	denominator = np.sum(np.exp(a) ,axis=1)
+	yhat = np.exp(a) / np.sum (np.exp(a),axis=1,keepdims=True)
 
-	yhat=np.zeros( (x.shape[0],10))
-	for i in range(x.shape[0]):
-		yhat[i]=np.divide(np.exp(a[i,:]) , denominator[i])
-
-
-	print(y[1:5],"yval",yhat[1:5,:])
-
-	#for CEEF
+	loss = np.sum(-np.log(yhat[range(x.shape[0]),y.astype(int)]))
+	gloss +=loss
 	oneH = np.zeros((x.shape[0],10))
+	oneH[range(x.shape[0]),y.astype(int)]=1
+
 	yt = np.zeros((x.shape[0],10))
-	freqClass ={0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0,10:0}
-	for i in range(x.shape[0]):
-		yt[i,np.argmax(yhat[i])]=1
-		freqClass[np.argmax(yhat[i])]+=1
-		oneH[i,int(y[i])]=1
-	print(freqClass,"freqClass")
+	yt[range(x.shape[0]),np.argmax(yhat,axis=1)]=1
+
+	freqClass += np.sum(yt,axis=0)
+		# oneH[i,int(y[i])]=1
+	# print(freqClass.astype(int),"freqClass")
 	# print("yt",np.argmax(yhat,axis=1)[0:10])
 	# print("yt",np.argmax(yhat,axis=1)[0:10],yhat[0:10,:],"oneH",y[0:10])
+
 	nof= np.sum(np.multiply(yt,oneH))
-	nofc[iii]=nof    
-	loss =  -np.mean(np.multiply( np.log(yhat) ,oneH))
-	print("correct class",iii,jj, nof,"loss",loss)
+	nofc[iii]+=nof    
+	# print("correct class",iii,jj, nof,"loss",loss/x.shape[0])
 	# print("loss",loss)
 	
 
@@ -174,18 +170,12 @@ def grad_desc():
 	#print(sizes)
 	
 	for k in range(num_hidden,-1,-1):
-		Dwk= np.zeros((sizes[k],sizes[k+1]))
-		for i in range(x.shape[0]):
-			Dwk = np.add(Dwk,np.outer(hs[k][i],Dak[i]))
-		# print("hs_Dak_Dwk",hs[k].shape,Dak.shape,Dwk.shape)
-		# print("hs_Dak_Dwk",hs[k][4,10:20],Dak[1,1:4],Dwk[1:4,1:4])
-
-
-		Dwk = np.divide(Dwk,x.shape[0]-1)
+		Dwk = np.matmul(hs[k].T,Dak)
+		Dwk = Dwk/x.shape[0]
 		Dbk = Dak
 		Dbk = np.mean(Dbk,axis=0)
 		optimizer(k,Dwk,Dbk)
-		Dhk = np.matmul(Dak , np.transpose(wt[k]))
+		Dhk = np.matmul(Dak , wt[k].T)
 		# print("Dhk",Dhk[1,1:4])
 
 		Dak = np.multiply(Dhk,  fgrad(hs[k]) )       
@@ -210,13 +200,13 @@ def annealf(string):
 def main():
 	global lr,momentum,num_hidden,sizes,activation,loss,opt,batch_size,epoch,anneal,save_dir,expt_dir,train_path,test_path,valid_path
 	global train,test,valid
-	global iii,jj,mini,nofc,file
+	global iii,jj,mini,nofc,file,freqClass,gloss
 	print("parsing...")
 	parser = agp.ArgumentParser()
 	parser.add_argument("--lr", type=float, help="the learning rate", default=0.01)
 	parser.add_argument("--momentum", type=float, help="the momentum in lr", default=0.5)
-	parser.add_argument("--num_hidden", type=int, help="# of Hidden Layers", default=4)
-	parser.add_argument("--sizes", type=csv_list, help="# of Nodes per H_Layer", default= [400,200,100,50])
+	parser.add_argument("--num_hidden", type=int, help="# of Hidden Layers", default=3)
+	parser.add_argument("--sizes", type=csv_list, help="# of Nodes per H_Layer", default= [400,100,50])
 	parser.add_argument("--activation", type=str, help="activation function", default= "sigmoid", choices=["sigmoid","tanh"])
 	parser.add_argument("--loss", type=str, help="loss function", default= "ce", choices=["sq","ce"])
 	parser.add_argument("--opt", type=str, help="optimizer", default= "gd", choices=["gd","momentum","nag","adam"])
@@ -258,11 +248,15 @@ def main():
 	initwts()
 	nofc=np.zeros(500)
 
-	for iii in range(1000):
+	for iii in range(500):
 		np.random.shuffle(train)
+		freqClass = np.zeros(10)
+		gloss=0
 		for jj in range(10):
+			# print(jj,end=" ")
 			mini = train[jj*batch_size:(jj+1)*batch_size,:]
 			ycm=grad_desc()
+		print("\n ",iii,nofc[iii],freqClass.astype(int),gloss)
 	# for i in range(10):
 		# yc=vanilla_grad_desc(num_hidden,sizes)
 	file.close()
