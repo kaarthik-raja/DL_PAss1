@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import argparse as agp
 import os 
 from collections import Counter as freq_ 
+from sklearn.decomposition import PCA
+    
 
 # np.random.seed(0) #Dont seed for actualy random values
 #create global variables
@@ -25,7 +27,8 @@ from collections import Counter as freq_
 # train_path=""
 # valid_path=""
 # test_path=""
-
+#set random seed for replicability of results
+np.random.seed(1234)
 gamma=0.9
 eta=0.1
 adam_b1=0.9
@@ -53,7 +56,7 @@ adam_b_v=[]
 def initwts():
 	global sizes
 	sizes=np.asarray(sizes)
-	sizes=np.insert(sizes,0,784)
+	sizes=np.insert(sizes,0,350)
 	sizes=np.append(sizes,10).astype(int)
 
 	for n in range(num_hidden+1):
@@ -78,19 +81,19 @@ def initwts():
 			adam_b_v.append(np.zeros((sizes[n+1])))
 
 def fgrad(hs):
-	if activation == "sigmoid":
-		return np.multiply(hs,1-hs)
-	else:
-		return np.subtract(1,np.multiply(hs , hs))
+    if activation == "sigmoid":
+        return np.multiply(hs,1-hs)
+    else:
+        return np.subtract(1,np.multiply(hs , hs))
 
 def fval(a):
-	if activation == "sigmoid":
-		return np.reciprocal(np.add(1,np.exp(np.negative(a) )))
-	else:
-		return np.multiply(np.subtract(np.exp(a),np.exp( np.negative(a) )),np.reciprocal( np.add(np.exp(a),np.exp( np.negative(a) )) ) )
+    if activation == "sigmoid":
+        return np.reciprocal(np.add(1,np.exp(np.negative(a) )))
+    else:
+        return np.multiply(np.subtract(np.exp(a),np.exp( np.negative(a) )),np.reciprocal( np.add(np.exp(a),np.exp( np.negative(a) )) ) )
 
 # def outputError(y,oneH):
-	# pass
+    # pass
 def optimizer(k,Dwk,Dbk):
 	global wt,bias,momentum_w,momentum_b
 	# print("optimizer",opt,k,Dwk[1,1:4])
@@ -116,17 +119,16 @@ def optimizer(k,Dwk,Dbk):
 		adam_w_v[k] = np.add(np.multiply(adam_b2,adam_w_v[k]),np.multiply(1-adam_b2,np.multiply(Dwk,Dwk)))
 		adam_b_v[k] = np.add(np.multiply(adam_b2,adam_b_v[k]),np.multiply(1-adam_b2,np.multiply(Dbk,Dbk)))
 		
-		wt[k] = np.subtract(wt[k],np.multiply( np.multiply(eta, np.reciprocal( np.sqrt( np.add( np.divide(adam_w_v[k],1-adam_bp2) ,adam_epsilon) )) ), np.divide(adam_w_m[k],1-adam_bp1) ) )
+		wt[k] = np.subtract(  wt[k],  np.multiply( np.multiply(eta, np.reciprocal( np.sqrt( np.add( np.divide(adam_w_v[k],1-adam_bp2) ,adam_epsilon) )) ), np.divide(adam_w_m[k],1-adam_bp1) ) )
 		bias[k] = np.subtract(bias[k],np.multiply( np.multiply(eta, np.reciprocal( np.sqrt( np.add( np.divide(adam_b_v[k],1-adam_bp2) ,adam_epsilon) )) ), np.divide(adam_b_m[k],1-adam_bp1) ) )
 		
-
 # implementing functions to do different tasks. This is the main function block
 #def vanilla_grad_desc(num_hidden,sizes):
 def grad_desc():
 	global freqClass,gloss,adam_bp1,adam_bp2
-	x=mini[0:,1:785]
+	x=mini[0:,0:350]
 	x=np.divide(np.subtract(x.astype(float),127),128)
-	y=mini[0:,785]
+	y=mini[0:,350]
 	# print("yyy",y[0:10])
 	hs=[]    
 	h=x
@@ -192,10 +194,10 @@ def csv_list(string):
    return [ int(i) for i in string.split(',')]
 
 def annealf(string):
-	if string in ["true","True","T","t","1" ] :
-		return True
-	elif string in ["False","false","F","f","0"]:
-		return False
+    if string in ["true","True","T","t","1" ] :
+        return True
+    elif string in ["False","false","F","f","0"]:
+        return False
 
 def main():
 	global lr,momentum,num_hidden,sizes,activation,loss,opt,batch_size,epoch,anneal,save_dir,expt_dir,train_path,test_path,valid_path
@@ -237,7 +239,18 @@ def main():
 	# valid=pd.read_csv(valid_path)
 	print("finished reading images...")
 
-	train=train.values
+	# train=train.values
+
+    train=train.as_matrix()
+    x=train[:,0:785]
+    y=train[:,785]
+    pca=PCA(n_components=350)
+
+
+    x=pca.fit_transform(x)
+    yn = y.reshape(55000,1)
+    train=  np.hstack((x,yn))
+
 	# test=np.divide(np.subtract(test.values.astype(float),127),128)
 	# valid=np.divide(np.subtract(valid.values.astype(float),127),128)
 
@@ -263,8 +276,8 @@ def main():
 	plt.pyplot(iii,nofc)
 
 if __name__=="__main__":
-	main()
-	
+    main()
+    
 
 
 
