@@ -211,7 +211,7 @@ def main():
     parser.add_argument("--opt", type=str, help="optimizer", default= "gd", choices=["gd","momentum","nag","adam"])
     parser.add_argument("--batch_size", type=int, help="batch size per step", default= 20)
     parser.add_argument("--epoch", type=int, help="# of EPOCHs", default= 5)
-    parser.add_argument("--anneal", type=annealf, help="anneal", default= True,choices=[True,False])
+    parser.add_argument("--anneal", type=annealf, help="anneal", default= False,choices=[True,False])
     parser.add_argument("--save_dir", type=str, help="Save dir location", default= "pa1")
     parser.add_argument("--expt_dir", type=str, help="expt_dir location", default= os.path.join("pa1","exp1"))
     parser.add_argument("--train", type=str, help="train file location", default= os.path.join("Data","train.csv"))
