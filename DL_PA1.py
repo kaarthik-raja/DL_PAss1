@@ -129,7 +129,7 @@ def grad_desc():
 	x=mini[0:,0:350]
 	x=np.divide(np.subtract(x.astype(float),127),128)
 	y=mini[0:,350]
-	# print("yyy",y[0:10])
+
 	hs=[]    
 	h=x
 	hs.append(h)
@@ -156,20 +156,13 @@ def grad_desc():
 	yt[range(x.shape[0]),np.argmax(yhat,axis=1)]=1
 
 	freqClass += np.sum(yt,axis=0)
-		# oneH[i,int(y[i])]=1
-	# print(freqClass.astype(int),"freqClass")
-	# print("yt",np.argmax(yhat,axis=1)[0:10])
-	# print("yt",np.argmax(yhat,axis=1)[0:10],yhat[0:10,:],"oneH",y[0:10])
 
 	nof= np.sum(np.multiply(yt,oneH))
 	nofc[iii]+=nof    
-	# print("correct class",iii,jj, nof,"loss",loss/x.shape[0])
-	# print("loss",loss)
 	
 
 	#backward Propagation
 	Dak = yhat -  oneH
-	#print(sizes)
 	
 	for k in range(num_hidden,-1,-1):
 		Dwk = np.matmul(hs[k].T,Dak)
@@ -178,13 +171,9 @@ def grad_desc():
 		Dbk = np.mean(Dbk,axis=0)
 		optimizer(k,Dwk,Dbk)
 		Dhk = np.matmul(Dak , wt[k].T)
-		# print("Dhk",Dhk[1,1:4])
 
 		Dak = np.multiply(Dhk,  fgrad(hs[k]) )       
 		
-		# print("hs",hs[k][1,1:8],"Dwk",Dwk[75:80,6:10])
-		# print("Dak",Dak[1,1:4])
-	
 	if opt == "adam":
 		adam_bp1=adam_bp1*adam_b1
 		adam_bp2=adam_bp2*adam_b2
