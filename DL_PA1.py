@@ -27,7 +27,7 @@ from collections import Counter as freq_
 # test_path=""
 
 gamma=0.9
-eta=0.01
+eta=0.1
 adam_b1=0.9
 adam_bp1=0.9
 adam_b2=0.999
@@ -110,20 +110,20 @@ def optimizer(k,Dwk,Dbk):
 		update_b[k]= np.sum( np.multiply(gamma,update_b[k]),np.multiply(eta,Dbk) )
 		look_b[k]= np.subtract(look_b[k],update_b[k])
 	elif opt == "adam":
-		adam_w_m = np.add(np.multiply(adam_b1,adam_w_m),np.multiply(1-adam_b1,Dwk))
-		adam_b_m = np.add(np.multiply(adam_b1,adam_b_m),np.multiply(1-adam_b1,Dbk))
+		adam_w_m[k] = np.add(np.multiply(adam_b1,adam_w_m[k]),np.multiply(1-adam_b1,Dwk))
+		adam_b_m[k] = np.add(np.multiply(adam_b1,adam_b_m[k]),np.multiply(1-adam_b1,Dbk))
 		
-		adam_w_v = np.add(np.multiply(adam_b2,adam_w_v),np.multiply(1-adam_b2,np.multiply(Dwk,Dwk)))
-		adam_b_v = np.add(np.multiply(adam_b2,adam_b_v),np.multiply(1-adam_b2,np.multiply(Dbk,Dbk)))
+		adam_w_v[k] = np.add(np.multiply(adam_b2,adam_w_v[k]),np.multiply(1-adam_b2,np.multiply(Dwk,Dwk)))
+		adam_b_v[k] = np.add(np.multiply(adam_b2,adam_b_v[k]),np.multiply(1-adam_b2,np.multiply(Dbk,Dbk)))
 		
-		wt[k] = np.subtract(wt[k],np.multiply( np.multiply(eta, np.reciprocal( np.sqrt( np.add( np.divide(adam_w_v,1-adam_bp2) ,adam_epsilon) )) ), np.divide(adam_w_m,1-adam_bp1) ) )
-		bias[k] = np.subtract(bias[k],np.multiply( np.multiply(eta, np.reciprocal( np.sqrt( np.add( np.divide(adam_b_v,1-adam_bp2) ,adam_epsilon) )) ), np.divide(adam_b_m,1-adam_bp1) ) )
+		wt[k] = np.subtract(wt[k],np.multiply( np.multiply(eta, np.reciprocal( np.sqrt( np.add( np.divide(adam_w_v[k],1-adam_bp2) ,adam_epsilon) )) ), np.divide(adam_w_m[k],1-adam_bp1) ) )
+		bias[k] = np.subtract(bias[k],np.multiply( np.multiply(eta, np.reciprocal( np.sqrt( np.add( np.divide(adam_b_v[k],1-adam_bp2) ,adam_epsilon) )) ), np.divide(adam_b_m[k],1-adam_bp1) ) )
 		
 
 # implementing functions to do different tasks. This is the main function block
 #def vanilla_grad_desc(num_hidden,sizes):
 def grad_desc():
-	global freqClass,gloss
+	global freqClass,gloss,adam_bp1,adam_bp2
 	x=mini[0:,1:785]
 	x=np.divide(np.subtract(x.astype(float),127),128)
 	y=mini[0:,785]
@@ -246,9 +246,9 @@ def main():
 	# np.random.shuffle(test)
 
 	initwts()
-	nofc=np.zeros(500)
+	nofc=np.zeros(5000)
 
-	for iii in range(500):
+	for iii in range(5000):
 		np.random.shuffle(train)
 		freqClass = np.zeros(10)
 		gloss=0
