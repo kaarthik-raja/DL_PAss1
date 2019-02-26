@@ -255,7 +255,8 @@ def main():
     x=train[:,0:785]
     y=train[:,785]
     pca=PCA(n_components=350)
-    x=pca.fit_transform(x)
+    pcamod=pca.fit(x) #pickle this to use it on test data
+    x=pcamod.transform(x)
     yn = y.reshape(55000,1)
     train=  np.hstack((x,yn))
 
