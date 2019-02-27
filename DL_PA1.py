@@ -59,7 +59,7 @@ def initwts():
 	global sizes,wt,bias
 	global momentum_w,momentum_b
 	global look_w,look_b
-	global adam_w_m,adam_w_v,adam_b_m,adam_b_v
+	global adam_w_m,adam_w_v,adam_b_m,adam_b_v,adam_bp2,adam_bp1
 	
 	sizes=np.asarray(sizes)
 	sizes=np.insert(sizes,0,350)
@@ -67,7 +67,6 @@ def initwts():
 
 	same_model = False
 	if os.path.exists(os.path.join("Model","model.pkl")):
-		print("Some model Exists")
 		with open(os.path.join("Model","model.pkl"), 'rb') as f:
 			model=pickle.load(f)
 			nsizes  = model["sizes"]
@@ -111,11 +110,12 @@ def initwts():
 			adam_w_v.append(np.zeros((sizes[n],sizes[n+1])))
 			adam_b_m.append(np.zeros((sizes[n+1])))
 			adam_b_v.append(np.zeros((sizes[n+1])))
-	if os.path.exists(os.path.join("Model","adam_w_v.npy")):
-		adam_w_v = np.load(os.path.join("Model","adam_w_v.npy"))
-		adam_w_m = np.load(os.path.join("Model","adam_w_m.npy"))
-		adam_b_v = np.load(os.path.join("Model","adam_b_v.npy"))
-		adam_b_m = np.load(os.path.join("Model","adam_b_m.npy"))
+	if same_model:
+		if opt == "adam" and os.path.exists(os.path.join("Model","adam_w_v.npy")):
+			adam_w_v = np.load(os.path.join("Model","adam_w_v.npy"))
+			adam_w_m = np.load(os.path.join("Model","adam_w_m.npy"))
+			adam_b_v = np.load(os.path.join("Model","adam_b_v.npy"))
+			adam_b_m = np.load(os.path.join("Model","adam_b_m.npy"))
 
 def fgrad(hs):
 	if activation == "sigmoid":
@@ -260,13 +260,13 @@ def annealf(string):
 		return False
 
 def logfile(expt_dir,log_type): #log_type: log_train.txt/log_validation.txt depending upon the data used
-    f_location='%s%s' %(expt_dir,log_type)
-    f=open(f_location , 'w+')
-    f.write(" Epoch : %d , Step : %d , Loss : %d , Error: %d , lr :%d" %(iii,step,gloss,(55000-nofc[iii]),eta))
-    f.close()    
+	f_location='%s%s' %(expt_dir,log_type)
+	f=open(f_location , 'w+')
+	f.write(" Epoch : %d , Step : %d , Loss : %d , Error: %d , lr :%d" %(iii,iii* step,gloss,(55000-nofc[iii]),eta))
+	f.close()    
 
 def testprediction(expt_dir):
-    pass
+	pass
 
 
 
@@ -312,8 +312,8 @@ def main():
 
 	# train=train.values
 
-	train=train.as_matrix()
-	valid=valid.as_matrix()
+	train=train.values
+	valid=valid.values
 	x=train[:,0:785]
 	y=train[:,785]
 	
@@ -346,16 +346,15 @@ def main():
 	# np.random.shuffle(test)
 	initwts()
 	nofc=np.zeros(500)
-    step=0 # update step for printing loss
 	for iii in range(5000):
 		np.random.shuffle(train)
 		freqClass = np.zeros(10)
 		gloss=0
 		for jj in range(10):
 			# print(jj,end=" ")
-            step=step+1
-            if(step%100==0):
-                logfile(expt_dir,"log_train.txt")
+			step=step+1
+			if(step%100==0):
+				logfile(expt_dir,"log_train.txt")
 			mini = train[jj*batch_size:(jj+1)*batch_size,:]
 			ycm=grad_desc()
 
@@ -367,9 +366,7 @@ def main():
 				model["num_hidden"]=num_hidden
 				if opt =="adam":
 					model["adam_bp1"]=adam_bp1
-					model["adam_b1"]=adam_b1
 					model["adam_bp2"]=adam_bp2
-					model["adam_b2"]=adam_b2
 					np.save(os.path.join("Model","adam_w_v.npy"),np.array(adam_w_v))
 					np.save(os.path.join("Model","adam_b_v.npy"),np.array(adam_b_v))
 					np.save(os.path.join("Model","adam_w_m.npy"),np.array(adam_w_m))
