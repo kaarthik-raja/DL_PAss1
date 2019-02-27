@@ -246,7 +246,6 @@ def logfile(expt_dir,log_type): #log_type: log_train.txt/log_validation.txt depe
     f_location='%s%s' %(expt_dir,log_type)
     f=open(f_location , 'w+')
     f.write(" Epoch : %d , Step : %d , Loss : %d ,  Error: %d , lr :%d \n" %(iii,step,gloss,round((55000-nofc[iii])/550,2),eta))
-    global f 
     f.close()     
 
 
@@ -411,13 +410,13 @@ def main():
 	fpred.write("id,csv \n")
 	for r in range(test.size[0]):
 		fpred.write(sno[r],predclass[r])
+    fpred.close()
 
 
 
 
 
-fpred.close()
-
+    
 if __name__=="__main__":
 	main()
 	
