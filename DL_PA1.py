@@ -191,12 +191,29 @@ def annealf(string):
 def logfile(expt_dir,log_type): #log_type: log_train.txt/log_validation.txt depending upon the data used
     f_location='%s%s' %(expt_dir,log_type)
     f=open(f_location , 'w+')
-    f.write(" Epoch : %d , Step : %d , Loss : %d , Error: %d , lr :%d" %(iii,step,gloss,(55000-nofc[iii]),eta))
-    f.close()    
+    f.write(" Epoch : %d , Step : %d , Loss : %d ,  Error: %d , lr :%d \n" %(iii,step,gloss,round((55000-nofc[iii])/550,2),eta))
+    f.close()     
 
 def testprediction(expt_dir):
+    fn="test_submission.csv"
+    f_location  = "%s%s"%(expt_dir,fn)
+    fpred=open(f_location,'w+')
+    fpred.write("id,csv \n")
+    
     pass
 
+
+
+def predict(x,y):
+    h=x
+    for n in range(num_hidden):
+            a=np.add(np.matmul(h,wt[n]),bias[n])
+            h=fval(a)
+            hs.append(h)
+
+    a=np.add(np.matmul(h,wt[num_hidden]),bias[num_hidden]) 
+    yhat = np.exp(a) / np.sum (np.exp(a),axis=1,keepdims=True)
+    return yhat
 
 
 def main():
@@ -235,8 +252,8 @@ def main():
 
 	file = open("train.txt","w")
 	train=pd.read_csv(train_path)
-	# test=pd.read_csv(test_path)
-	# valid=pd.read_csv(valid_path)
+	test=pd.read_csv(test_path)
+	valid=pd.read_csv(valid_path)
 	print("finished reading images...")
 
 	# train=train.values
@@ -251,7 +268,15 @@ def main():
 	train=  np.hstack((x,yn))
 
 	# test=np.divide(np.subtract(test.values.astype(float),127),128)
-	# valid=np.divide(np.subtract(valid.values.astype(float),127),128)
+	valid=np.divide(np.subtract(valid.values.astype(float),127),128)
+    valid=valid.as_matrix()
+    x=valid[:,0:785]
+    y=valid[:,785]
+    x=pcamod.transform(x)
+    yn = y.reshape(55000,1)
+    valid=  np.hstack((x,yn))
+    ypred=predict(x,y)
+    logfile(expt_dir,"log_validation.txt")
 
 	# print("sizes",sizes)
 	#np.random.shuffle(train)
@@ -276,6 +301,8 @@ def main():
 		# yc=vanilla_grad_desc(num_hidden,sizes)
 	file.close()
 	plt.pyplot(iii,nofc)
+
+
 
 if __name__=="__main__":
 	main()
