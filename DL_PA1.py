@@ -11,24 +11,7 @@ from sklearn.externals import joblib
 import json
 import pickle
 
-# np.random.seed(0) #Dont seed for actualy random values
-#create global variables
-# lr= 0.01 # learning rate
-# momentum=0.5 
-# num_hidden=3 
-# sizes=np.zeros(3)
-# activation= "sigmoid"
-# lossfn= "sq" 
-# opt= "adam" # optimizer
-# batch_size=20 
-# epochs=5
-# anneal=True
 
-#save paths
-# save_dir=""
-# train_path=""
-# valid_path=""
-# test_path=""
 #set random seed for replicability of results
 np.random.seed(1234)
 gamma=0.9
@@ -267,7 +250,16 @@ def logfile(expt_dir,log_type): #log_type: log_train.txt/log_validation.txt depe
 
 def testprediction(expt_dir):
 	pass
+def predict(x):
+    h=x
+    for n in range(num_hidden):
+            a=np.add(np.matmul(h,wt[n]),bias[n])
+            h=fval(a)
+            hs.append(h)
 
+    a=np.add(np.matmul(h,wt[num_hidden]),bias[num_hidden]) 
+    yhat = np.exp(a) / np.sum (np.exp(a),axis=1,keepdims=True)
+    return yhat
 
 
 def main():
@@ -279,11 +271,11 @@ def main():
 	parser.add_argument("--lr", type=float, help="the learning rate", default=0.01)
 	parser.add_argument("--momentum", type=float, help="the momentum in lr", default=0.5)
 	parser.add_argument("--num_hidden", type=int, help="# of Hidden Layers", default=2)
-	parser.add_argument("--sizes", type=csv_list, help="# of Nodes per H_Layer", default= [200,200])
+	parser.add_argument("--sizes", type=csv_list, help="# of Nodes per H_Layer", default= [100,100])
 	parser.add_argument("--activation", type=str, help="activation function", default= "sigmoid", choices=["sigmoid","tanh"])
 	parser.add_argument("--loss", type=str, help="loss function", default= "ce", choices=["sq","ce"])
 	parser.add_argument("--opt", type=str, help="optimizer", default= "gd", choices=["gd","momentum","nag","adam"])
-	parser.add_argument("--batch_size", type=int, help="batch size per step", default= 5500)
+	parser.add_argument("--batch_size", type=int, help="batch size per step", default= 50)
 	parser.add_argument("--epoch", type=int, help="# of EPOCHs", default= 5)
 	parser.add_argument("--anneal", type=annealf, help="anneal", default= True,choices=[True,False])
 	parser.add_argument("--save_dir", type=str, help="Save dir location", default= "pa1")
@@ -305,9 +297,8 @@ def main():
 
 	file = open("train.txt","w")
 	train=pd.read_csv(train_path)
+	
 	valid=pd.read_csv(valid_path)
-	# test=pd.read_csv(test_path)
-	# valid=pd.read_csv(valid_path)
 	print("finished reading images...")
 
 	# train=train.values
@@ -338,21 +329,35 @@ def main():
 	yn = y_val.reshape(y_val.shape[0],1)
 	valid=  np.hstack((x_val,yn))
 
-	# test=np.divide(np.subtract(test.values.astype(float),127),128)
-	# valid=np.divide(np.subtract(valid.values.astype(float),127),128)
+	
+    #validation error
+	valid=np.divide(np.subtract(valid.values.astype(float),127),128)
+	valid=valid.as_matrix()
+	x=valid[:,0:785]
+	y=valid[:,785]
+	x=pcamod.transform(x)
+	yn = y.reshape(55000,1)
+	valid=  np.hstack((x,yn))
+	ypred=predict(x)
+	loss = np.sum(-np.log(ypred[range(x.shape[0]),y.astype(int)]))
+	oneH = np.zeros((x.shape[0],10))
+	oneH[range(x.shape[0]),y.astype(int)]=1
+	yt = np.zeros((x.shape[0],10))
+	yt[range(x.shape[0]),np.argmax(yhat,axis=1)]=1
+	freqClass += np.sum(yt,axis=0)
+	nof= np.sum(np.multiply(yt,oneH))
+	print(" Correctly classified samples ratio is %d \n"%round((nof/55000),2))
+	logfile(expt_dir,"log_validation.txt")
 
-	# print("sizes",sizes)
-	#np.random.shuffle(train)
-	# np.random.shuffle(test)
 	initwts()
 	nofc=np.zeros(500)
-	step=0
-	for iii in range(5000):
+
+	step=0 # update step for printing loss
+	for iii in range(200):
 		np.random.shuffle(train)
 		freqClass = np.zeros(10)
 		gloss=0
-		for jj in range(10):
-			# print(jj,end=" ")
+		for jj in range(np.divide(55000,batch_size)):
 			step=step+1
 			if(step%100==0):
 				logfile(expt_dir,"log_train.txt")
@@ -360,7 +365,7 @@ def main():
 			ycm=grad_desc()
 
 		if (iii %100) == 10:
-			validation()
+			#validation()
 			with open(os.path.join("Model","model.pkl"), 'wb') as f:
 				model = {}
 				model["sizes"]=sizes
@@ -382,9 +387,33 @@ def main():
 		print("\n ",iii,nofc[iii],freqClass.astype(int),gloss)
 	# for i in range(10):
 		# yc=vanilla_grad_desc(num_hidden,sizes)
+	
 	file.close()
 	plt.pyplot(iii,nofc)
 
+    #test set prediction
+	test=pd.read_csv(test_path)
+	test=np.divide(np.subtract(test.values.astype(float),127),128)
+	test=test.as_matrix()
+	sno=test[:,0]
+	x=test[:,0:785]
+	x=pcamod.transform(x)
+	ypred=predict(x)
+	predclass = np.zeros(x.shape[0])
+	for i in range(x.shape[0]):
+		predclass[i]=np.argmax(ypred[i],axis=1)
+
+	fn="test_submission.csv"
+	f_location  = "%s%s"%(expt_dir,fn)
+	fpred=open(f_location,'a+')
+	fpred.write("id,csv \n")
+	for r in range(test.size[0]):
+		fpred.write(sno[r],predclass[r])
+    fpred.close()
+
+
+
+    
 if __name__=="__main__":
 	main()
 	
