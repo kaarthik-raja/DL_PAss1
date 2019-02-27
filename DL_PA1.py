@@ -129,9 +129,9 @@ def optimizer(k,Dwk,Dbk):
 		momentum_b[k]=np.add(momentum_b[k], np.multiply(eta,Dbk))
 		bias[k]=np.subtract(bias[k], momentum_b[k])
 	elif opt == "nag":
-		update_w[k]= np.sum( np.multiply(gamma,update_w[k]),np.multiply(eta,Dwk) )
+		update_w[k]= np.add( np.multiply(gamma,update_w[k]),np.multiply(eta,Dwk) )
 		look_w[k]= np.subtract(look_w[k],update_w[k])
-		update_b[k]= np.sum( np.multiply(gamma,update_b[k]),np.multiply(eta,Dbk) )
+		update_b[k]= np.add( np.multiply(gamma,update_b[k]),np.multiply(eta,Dbk) )
 		look_b[k]= np.subtract(look_b[k],update_b[k])
 	elif opt == "adam":
 		adam_w_m[k] = np.add(np.multiply(adam_b1,adam_w_m[k]),np.multiply(1-adam_b1,Dwk))
@@ -156,8 +156,8 @@ def grad_desc():
 	hs.append(h)
 	
 	if opt == "nag":
-		for k in range(num_hidden,-1,-1):
-			print(type(look_w),look_w[k])
+		for k in range(num_hidden+1):
+			# print(type(look_w),update_w[k])
 			wt[k] = np.subtract(look_w[k],np.multiply(gamma,update_w[k]) )
 			bias[k] = np.subtract(look_b[k],np.multiply(gamma,update_b[k]) )
 
