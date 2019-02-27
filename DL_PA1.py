@@ -262,7 +262,7 @@ def annealf(string):
 def logfile(expt_dir,log_type): #log_type: log_train.txt/log_validation.txt depending upon the data used
 	f_location='%s%s' %(expt_dir,log_type)
 	f=open(f_location , 'w+')
-	f.write(" Epoch : %d , Step : %d , Loss : %d , Error: %d , lr :%d" %(iii,iii* step,gloss,(55000-nofc[iii]),eta))
+	f.write(" Epoch : %d , Step : %d , Loss : %f , Error: %f , lr :%f" %(iii,step,gloss,(55000-nofc[iii])/55000,eta))
 	f.close()    
 
 def testprediction(expt_dir):
@@ -273,13 +273,13 @@ def testprediction(expt_dir):
 def main():
 	global lr,momentum,num_hidden,sizes,activation,loss,opt,batch_size,epoch,anneal,save_dir,expt_dir,train_path,test_path,valid_path
 	global train,test,valid,wt,bias,adam_bp1,adam_bp2
-	global iii,jj,mini,nofc,file,freqClass,gloss
+	global iii,jj,mini,nofc,file,freqClass,gloss,step
 	print("parsing...")
 	parser = agp.ArgumentParser()
 	parser.add_argument("--lr", type=float, help="the learning rate", default=0.01)
 	parser.add_argument("--momentum", type=float, help="the momentum in lr", default=0.5)
-	parser.add_argument("--num_hidden", type=int, help="# of Hidden Layers", default=3)
-	parser.add_argument("--sizes", type=csv_list, help="# of Nodes per H_Layer", default= [200,100,50])
+	parser.add_argument("--num_hidden", type=int, help="# of Hidden Layers", default=2)
+	parser.add_argument("--sizes", type=csv_list, help="# of Nodes per H_Layer", default= [200,200])
 	parser.add_argument("--activation", type=str, help="activation function", default= "sigmoid", choices=["sigmoid","tanh"])
 	parser.add_argument("--loss", type=str, help="loss function", default= "ce", choices=["sq","ce"])
 	parser.add_argument("--opt", type=str, help="optimizer", default= "gd", choices=["gd","momentum","nag","adam"])
@@ -346,6 +346,7 @@ def main():
 	# np.random.shuffle(test)
 	initwts()
 	nofc=np.zeros(500)
+	step=0
 	for iii in range(5000):
 		np.random.shuffle(train)
 		freqClass = np.zeros(10)
