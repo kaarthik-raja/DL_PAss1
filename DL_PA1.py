@@ -21,6 +21,7 @@ adam_bp1=0.9
 adam_b2=0.999
 adam_bp2=0.999
 adam_epsilon= 0.0000001
+ploss=0.0
 #initialize weights and bias
 wt=[] #list of weight matrices 
 bias=[] #list of bias vectors
@@ -155,8 +156,10 @@ def grad_desc():
 	hs.append(h)
 	
 	if opt == "nag":
-		wt[k] = np.subtract(look_w[k],np.multiply(gamma,update_w[k]) )
-		bias[k] = np.subtract(look_b[k],np.multiply(gamma,update_b[k]) )
+		for k in range(num_hidden,-1,-1):
+			print(type(look_w),look_w[k])
+			wt[k] = np.subtract(look_w[k],np.multiply(gamma,update_w[k]) )
+			bias[k] = np.subtract(look_b[k],np.multiply(gamma,update_b[k]) )
 
 	#forward Propagation
 	for n in range(num_hidden):
@@ -200,7 +203,7 @@ def grad_desc():
 	return loss
 
 def validation(data,classlbl=False):
-	global adam_bp1,adam_bp2,expt_dir
+	global adam_bp1,adam_bp2,expt_dir,ploss,eta,anneal
 	x=data[0:,0:350]
 	x=np.divide(np.subtract(x.astype(float),127),128)
 
@@ -215,6 +218,8 @@ def validation(data,classlbl=False):
 	a=np.add(np.matmul(h,wt[num_hidden]),bias[num_hidden]) 
 	yhat = np.exp(a) / np.sum (np.exp(a),axis=1,keepdims=True)
 
+
+
 	yt = np.zeros((x.shape[0],10))
 	yt[range(x.shape[0]),np.argmax(yhat,axis=1)]=1
 
@@ -223,8 +228,10 @@ def validation(data,classlbl=False):
 		print("test",data.shape,freqClass)
 		return np.argmax(yhat,axis=1)
 
+	loss = np.sum(-np.log(yhat[range(x.shape[0]),y.astype(int)]))
 
- 
+	if ploss < loss and anneal:
+		eta = eta*0.8 
 
 	oneH = np.zeros((x.shape[0],10))
 	oneH[range(x.shape[0]),y.astype(int)]=1
@@ -261,8 +268,8 @@ def main():
 	parser = agp.ArgumentParser()
 	parser.add_argument("--lr", type=float, help="the learning rate", default=0.01)
 	parser.add_argument("--momentum", type=float, help="the momentum in lr", default=0.5)
-	parser.add_argument("--num_hidden", type=int, help="# of Hidden Layers", default=2)
-	parser.add_argument("--sizes", type=csv_list, help="# of Nodes per H_Layer", default= [100,100])
+	parser.add_argument("--num_hidden", type=int, help="# of Hidden Layers", default=3)
+	parser.add_argument("--sizes", type=csv_list, help="# of Nodes per H_Layer", default= [200,100,50])
 	parser.add_argument("--activation", type=str, help="activation function", default= "sigmoid", choices=["sigmoid","tanh"])
 	parser.add_argument("--loss", type=str, help="loss function", default= "ce", choices=["sq","ce"])
 	parser.add_argument("--opt", type=str, help="optimizer", default= "gd", choices=["gd","momentum","nag","adam"])
@@ -295,7 +302,7 @@ def main():
 
 	train=train.values
 	valid=valid.values
-	x=train[:,0:785]
+	x=train[:,1:785]
 	y=train[:,785]
 	
 	
@@ -314,7 +321,7 @@ def main():
 	train=  np.hstack((x,yn))
 
 
-	x_val=valid[:,0:785]
+	x_val=valid[:,1:785]
 	y_val =valid[:,785]
 	x_val =pcamod.transform(x_val)
 	yn = y_val.reshape(y_val.shape[0],1)
@@ -358,7 +365,7 @@ def main():
 				np.save(os.path.join("Model","bias.npy"),np.array(bias))
 
 		print("\n ",iii,nofc[iii],freqClass.astype(int),gloss)
-		if gloss<80:
+		if gloss<80 and nofc[iii]==train.shape[0]:
 			break
 	# for i in range(10):
 		# yc=vanilla_grad_desc(num_hidden,sizes)
@@ -370,7 +377,7 @@ def main():
 	test=pd.read_csv(test_path)
 	test=test.values
 	sno=test[:,0]
-	x=test[:,0:785]
+	x=test[:,1:785]
 	x=pcamod.transform(x)
 	ypred=validation(x,classlbl=True)
 
@@ -380,7 +387,7 @@ def main():
 	fpred.write("id,label\n")
 	for r in range(x.shape[0]):
 		fpred.write("%d,%d\n"%(sno[r],ypred[r]) )
-	print("  ",ypred[2000:2500],sno[r])
+	# print("  ",ypred[2000:2500],sno[])
 	fpred.close()
 
 
