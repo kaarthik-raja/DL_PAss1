@@ -13,13 +13,15 @@ import pickle
 
 np.random.seed(1234)
 gamma=0.9
-eta=0.001
+eta=0.0001
 adam_b1=0.9
 adam_bp1=0.9
 adam_b2=0.999
 adam_bp2=0.999
 adam_epsilon= 0.0000001
-ploss=0.0
+ploss=1000000.0
+nof_PCA = 100
+nofpp =0
 #initialize weights and bias
 wt=[] #list of weight matrices 
 bias=[] #list of bias vectors
@@ -40,135 +42,188 @@ adam_w_v=[]
 adam_b_m=[]
 adam_b_v=[]
 def initwts():
-    global sizes,wt,bias
-    global momentum_w,momentum_b
-    global look_w,look_b
-    global adam_w_m,adam_w_v,adam_b_m,adam_b_v,adam_bp2,adam_bp1
+	global sizes,wt,bias
+	global momentum_w,momentum_b
+	global look_w,look_b
+	global adam_w_m,adam_w_v,adam_b_m,adam_b_v,adam_bp2,adam_bp1
+	
+	sizes=np.asarray(sizes)
+	sizes=np.insert(sizes,0,nof_PCA)
+	sizes=np.append(sizes,10).astype(int)
 
-    sizes=np.asarray(sizes)
-    sizes=np.insert(sizes,0,350)
-    sizes=np.append(sizes,10).astype(int)
-
-    same_model = False
-    if os.path.exists(os.path.join("Model","model.pkl")):
-        with open(os.path.join("Model","model.pkl"), 'rb') as f:
-            model=pickle.load(f)
-            nsizes  = model["sizes"]
-            adam_bp2 = model.get("adam_bp2",adam_b2)
-            adam_bp1 = model.get("adam_bp1",adam_b1)
-            same_model = True
-            if num_hidden == model["num_hidden"]:
-                for k in range(num_hidden+1):
-                    if nsizes[k] != sizes[k]:
-                        same_model = False
-            else:
-                same_model = False
-            print("Same  Model :",same_model)
-    if same_model:
-        wt = np.load(os.path.join("Model","wt.npy"))
-        bias = np.load(os.path.join("Model","bias.npy"))
-
-        print("continuing previous model data....")
-    else:
-        wt= [None]*(num_hidden+1)
-        bias = [None]*(num_hidden+1)
-        for n in range(num_hidden+1):
-            w=np.random.randn(sizes[n],sizes[n+1])/np.sqrt(sizes[n]+sizes[n+1])
-            b=np.random.randn( sizes[n+1] )  
-            # w= np.subtract(np.multiply( np.random.rand(sizes[n],sizes[n+1]),2),1)
-            # b= np.subtract(np.random.rand(sizes[n+1]),0.5)
-            wt[n]=w
-            bias[n]=b
-
-    for n in range(num_hidden+1):
-        if opt =="momentum":
-            momentum_w.append(np.zeros((sizes[n],sizes[n+1])))
-            momentum_b.append(np.zeros((sizes[n+1])))
-        elif opt == "nag":
-            look_w.append(wt[n])
-            look_b.append(b[n])
-            update_w.append(np.zeros((sizes[n],sizes[n+1])))
-            update_b.append(np.zeros((sizes[n+1])))
-        elif opt == "adam":
-            adam_w_m.append(np.zeros((sizes[n],sizes[n+1])))
-            adam_w_v.append(np.zeros((sizes[n],sizes[n+1])))
-            adam_b_m.append(np.zeros((sizes[n+1])))
-            adam_b_v.append(np.zeros((sizes[n+1])))
-    if same_model:
-        if opt == "adam" and os.path.exists(os.path.join("Model","adam_w_v.npy")):
-            adam_w_v = np.load(os.path.join("Model","adam_w_v.npy"))
-            adam_w_m = np.load(os.path.join("Model","adam_w_m.npy"))
-            adam_b_v = np.load(os.path.join("Model","adam_b_v.npy"))
-            adam_b_m = np.load(os.path.join("Model","adam_b_m.npy"))
+	same_model = False
+	if os.path.exists(os.path.join("Model4","model.pkl")):
+		with open(os.path.join("Model4","model.pkl"), 'rb') as f:
+			model=pickle.load(f)
+			nsizes  = model["sizes"]
+			adam_bp2 = model.get("adam_bp2",adam_b2)
+			adam_bp1 = model.get("adam_bp1",adam_b1)
+			same_model = True
+			if num_hidden == model["num_hidden"]:
+				for k in range(num_hidden+1):
+					if nsizes[k] != sizes[k]:
+						same_model = False
+			else:
+				same_model = False
+			print("Same  Model :",same_model)
+	if same_model:
+		wt = np.load(os.path.join("Model4","wt.npy"))
+		bias = np.load(os.path.join("Model4","bias.npy"))
+		print("continuing previous model data....")
+	else:
+		wt= [None]*(num_hidden+1)
+		bias = [None]*(num_hidden+1)
+		for n in range(num_hidden+1):
+			w=np.random.randn(sizes[n],sizes[n+1])/np.sqrt(sizes[n]+sizes[n+1])
+			b=np.random.randn( sizes[n+1] )  
+			# w= np.subtract(np.multiply( np.random.rand(sizes[n],sizes[n+1]),2),1)
+			# b= np.subtract(np.random.rand(sizes[n+1]),0.5)
+			wt[n]=w
+			bias[n]=b
+		wt = np.array(wt)
+		bias = np.array(bias)
+	for n in range(num_hidden+1):
+		if opt =="momentum":
+			momentum_w.append(np.zeros((sizes[n],sizes[n+1])))
+			momentum_b.append(np.zeros((sizes[n+1])))
+		elif opt == "nag":
+			look_w.append(wt[n])
+			look_b.append(b[n])
+			update_w.append(np.zeros((sizes[n],sizes[n+1])))
+			update_b.append(np.zeros((sizes[n+1])))
+		elif opt == "adam":
+			adam_w_m.append(np.zeros((sizes[n],sizes[n+1])))
+			adam_w_v.append(np.zeros((sizes[n],sizes[n+1])))
+			adam_b_m.append(np.zeros((sizes[n+1])))
+			adam_b_v.append(np.zeros((sizes[n+1])))
+	adam_b_m = np.array(adam_b_m)
+	adam_b_v = np.array(adam_b_v)
+	adam_w_v = np.array(adam_w_v)
+	adam_w_m = np.array(adam_w_m)
+	if same_model:
+		if opt == "adam" and os.path.exists(os.path.join("Model4","adam_w_v.npy")):
+			adam_w_v = np.load(os.path.join("Model4","adam_w_v.npy"))
+			adam_w_m = np.load(os.path.join("Model4","adam_w_m.npy"))
+			adam_b_v = np.load(os.path.join("Model4","adam_b_v.npy"))
+			adam_b_m = np.load(os.path.join("Model4","adam_b_m.npy"))
 
 def fgrad(hs):
-    if activation == "sigmoid":
-        return np.multiply(hs,1-hs)
-    else:
-        return np.subtract(1,np.multiply(hs , hs))
+	if activation == "sigmoid":
+		return np.multiply(hs,1-hs)
+	elif activation == "tanh":
+		return np.subtract(1,np.multiply(hs , hs))
+	else:
+		hs[hs<=0]=0
+		hs[hs>0]=1
+		return hs
 
 def fval(a):
-    if activation == "sigmoid":
-        return np.reciprocal(np.add(1,np.exp(np.negative(a) )))
-    else:
-        return np.multiply(np.subtract(np.exp(a),np.exp( np.negative(a) )),np.reciprocal( np.add(np.exp(a),np.exp( np.negative(a) )) ) )
+	if activation == "sigmoid":
+		return np.reciprocal(np.add(1,np.exp(np.negative(a) )))
+	elif activation == "tanh":
+		return np.multiply(np.subtract(np.exp(2*a),1) ,  np.reciprocal( np.add( np.exp(2*a),1) )  )
+	else:
+		a[a<=0]=0
+		return a
 
 # def outputError(y,oneH):
     # pass
 def optimizer(k,Dwk,Dbk):
-    global wt,bias,momentum_w,momentum_b
-    # print("optimizer",opt,k,Dwk[1,1:4])
-    if opt == "gd":
-        wt[k]=np.subtract(wt[k],np.multiply(eta,Dwk))
-        bias[k]=np.subtract(bias[k],np.multiply(eta,Dbk))
-    elif opt == "momentum":
-        momentum_w[k]=np.multiply(momentum_w[k],gamma)
-        momentum_w[k]=np.add(momentum_w[k],np.multiply(eta,Dwk))
-        wt[k]=np.subtract(wt[k],momentum_w[k])        
-        momentum_b[k]=np.multiply(momentum_b[k],gamma)
-        momentum_b[k]=np.add(momentum_b[k], np.multiply(eta,Dbk))
-        bias[k]=np.subtract(bias[k], momentum_b[k])
-    elif opt == "nag":
-        update_w[k]= np.add( np.multiply(gamma,update_w[k]),np.multiply(eta,Dwk) )
-        look_w[k]= np.subtract(look_w[k],update_w[k])
-        update_b[k]= np.add( np.multiply(gamma,update_b[k]),np.multiply(eta,Dbk) )
-        look_b[k]= np.subtract(look_b[k],update_b[k])
-    elif opt == "adam":
-        adam_w_m[k] = np.add(np.multiply(adam_b1,adam_w_m[k]),np.multiply(1-adam_b1,Dwk))
-        adam_b_m[k] = np.add(np.multiply(adam_b1,adam_b_m[k]),np.multiply(1-adam_b1,Dbk))
-
-        adam_w_v[k] = np.add(np.multiply(adam_b2,adam_w_v[k]),np.multiply(1-adam_b2,np.multiply(Dwk,Dwk)))
-        adam_b_v[k] = np.add(np.multiply(adam_b2,adam_b_v[k]),np.multiply(1-adam_b2,np.multiply(Dbk,Dbk)))
-
-        wt[k] = np.subtract(  wt[k],  np.multiply( np.multiply(eta, np.reciprocal( np.sqrt( np.add( np.divide(adam_w_v[k],1-adam_bp2) ,adam_epsilon) )) ), np.divide(adam_w_m[k],1-adam_bp1) ) )
-        bias[k] = np.subtract(bias[k],np.multiply( np.multiply(eta, np.reciprocal( np.sqrt( np.add( np.divide(adam_b_v[k],1-adam_bp2) ,adam_epsilon) )) ), np.divide(adam_b_m[k],1-adam_bp1) ) )
-
+	global wt,bias,momentum_w,momentum_b
+	Dwk = np.add(Dwk,np.multiply(wt[k],0.0001))
+	# print("optimizer",opt,k,Dwk[1,1:4])
+	if opt == "gd":
+		wt[k]=np.subtract(wt[k],np.multiply(eta,Dwk))
+		bias[k]=np.subtract(bias[k],np.multiply(eta,Dbk))
+	elif opt == "momentum":
+		momentum_w[k]=np.multiply(momentum_w[k],gamma)
+		momentum_w[k]=np.add(momentum_w[k],np.multiply(eta,Dwk))
+		wt[k]=np.subtract(wt[k],momentum_w[k])        
+		momentum_b[k]=np.multiply(momentum_b[k],gamma)
+		momentum_b[k]=np.add(momentum_b[k], np.multiply(eta,Dbk))
+		bias[k]=np.subtract(bias[k], momentum_b[k])
+	elif opt == "nag":
+		update_w[k]= np.add( np.multiply(gamma,update_w[k]),np.multiply(eta,Dwk) )
+		look_w[k]= np.subtract(look_w[k],update_w[k])
+		update_b[k]= np.add( np.multiply(gamma,update_b[k]),np.multiply(eta,Dbk) )
+		look_b[k]= np.subtract(look_b[k],update_b[k])
+	elif opt == "adam":
+		adam_w_m[k] = np.add(np.multiply(adam_b1,adam_w_m[k]),np.multiply(1-adam_b1,Dwk))
+		adam_b_m[k] = np.add(np.multiply(adam_b1,adam_b_m[k]),np.multiply(1-adam_b1,Dbk))
+		
+		adam_w_v[k] = np.add(np.multiply(adam_b2,adam_w_v[k]),np.multiply(1-adam_b2,np.multiply(Dwk,Dwk)))
+		adam_b_v[k] = np.add(np.multiply(adam_b2,adam_b_v[k]),np.multiply(1-adam_b2,np.multiply(Dbk,Dbk)))
+		
+		wt[k] = np.subtract(  wt[k],  np.multiply( np.multiply(eta, np.reciprocal( np.sqrt( np.add( np.divide(adam_w_v[k],1-adam_bp2) ,adam_epsilon) )) ), np.divide(adam_w_m[k],1-adam_bp1) ) )
+		bias[k] = np.subtract(bias[k],np.multiply( np.multiply(eta, np.reciprocal( np.sqrt( np.add( np.divide(adam_b_v[k],1-adam_bp2) ,adam_epsilon) )) ), np.divide(adam_b_m[k],1-adam_bp1) ) )
+		
 # implementing functions to do different tasks. This is the main function block
 #def vanilla_grad_desc(num_hidden,sizes):
 def grad_desc():
-    global freqClass,gloss,adam_bp1,adam_bp2
-    x=mini[0:,0:350]
-    x=np.divide(np.subtract(x.astype(float),127),128)
-    y=mini[0:,350]
+	global freqClass,gloss,adam_bp1,adam_bp2
+	x=mini[0:,0:nof_PCA]
+	x=np.divide(np.subtract(x.astype(float),127),128)
+	y=mini[0:,nof_PCA]
 
-    hs=[]    
-    h=x
-    hs.append(h)
+	hs=[]    
+	h=x
+	hs.append(h)
+	
+	if opt == "nag":
+		for k in range(num_hidden+1):
+			# print(type(look_w),update_w[k])
+			wt[k] = np.subtract(look_w[k],np.multiply(gamma,update_w[k]) )
+			bias[k] = np.subtract(look_b[k],np.multiply(gamma,update_b[k]) )
 
-    if opt == "nag":
-        for k in range(num_hidden+1):
-            # print(type(look_w),update_w[k])
-            wt[k] = np.subtract(look_w[k],np.multiply(gamma,update_w[k]) )
-            bias[k] = np.subtract(look_b[k],np.multiply(gamma,update_b[k]) )
+	#forward Propagation
+	for n in range(num_hidden):
+			a=np.add(np.matmul(h,wt[n]),bias[n])
+			h=fval(a)
+			hs.append(h)
 
-    #forward Propagation
-    for n in range(num_hidden):
-            a=np.add(np.matmul(h,wt[n]),bias[n])
-            h=fval(a)
-            hs.append(h)
+	a=np.add(np.matmul(h,wt[num_hidden]),bias[num_hidden]) 
+	yhat = np.exp(a) / np.sum (np.exp(a),axis=1,keepdims=True)
 
-    a=np.add(np.matmul(h,wt[num_hidden]),bias[num_hidden]) 
-    yhat = np.exp(a) / np.sum (np.exp(a),axis=1,keepdims=True)
+	loss = np.sum(-np.log(yhat[range(x.shape[0]),y.astype(int)]))
+	gloss +=loss
+	oneH = np.zeros((x.shape[0],10))
+	oneH[range(x.shape[0]),y.astype(int)]=1
+
+	yt = np.zeros((x.shape[0],10))
+	yt[range(x.shape[0]),np.argmax(yhat,axis=1)]=1
+
+	freqClass += np.sum(yt,axis=0)
+
+	nof= np.sum(np.multiply(yt,oneH))
+	nofc[iii]+=nof    
+	
+
+	#backward Propagation
+	Dak = yhat -  oneH
+	
+	for k in range(num_hidden,-1,-1):
+		Dwk = np.matmul(hs[k].T,Dak)
+		Dwk = Dwk/x.shape[0]
+		Dbk = Dak
+		Dbk = np.mean(Dbk,axis=0)
+		optimizer(k,Dwk,Dbk)
+		Dhk = np.matmul(Dak , wt[k].T)
+
+		Dak = np.multiply(Dhk,  fgrad(hs[k]) )       
+		
+	if opt == "adam":
+		adam_bp1=adam_bp1*adam_b1
+		adam_bp2=adam_bp2*adam_b2
+	return loss
+
+def validation(data,classlbl=False):
+	global adam_bp1,adam_bp2,expt_dir,ploss,eta,anneal,iii,nofp,nofpp
+	global adam_b_mc,adam_w_mc,adam_w_vc,adam_b_vc,wtc,biasc,adam_bp1c,adam_bp2c
+	x=data[0:,0:nof_PCA]
+	x=np.divide(np.subtract(x.astype(float),127),128)
+
+	if not classlbl:
+		y=data[0:,nof_PCA]
 
     loss = np.sum(-np.log(yhat[range(x.shape[0]),y.astype(int)]))
     gloss +=loss
@@ -182,7 +237,7 @@ def grad_desc():
 
     nof= np.sum(np.multiply(yt,oneH))
     nofc[iii]+=nof    
-
+d
 
     #backward Propagation
     Dak = yhat -  oneH
@@ -210,10 +265,29 @@ def validation(data,classlbl=False):
     if not classlbl:
         y=data[0:,350]
 
-    h=x
-    for n in range(num_hidden):
-            a=np.add(np.matmul(h,wt[n]),bias[n])
-            h=fval(a)
+	if anneal:
+		if ploss < loss and nofp < nofpp:
+
+
+			wt = np.array(wtc)
+			bias = np.array(biasc)
+			if opt == "adam":
+				adam_b_m = np.array(adam_b_mc)
+				adam_b_v = np.array(adam_b_vc)
+				adam_w_m = np.array(adam_w_mc)
+				adam_w_v = np.array(adam_w_vc)
+
+			print("anneal",ploss,loss)
+			eta = eta*0.9
+			iii-=10
+
+		wtc = np.array(wt)
+		biasc = np.array(bias)
+		if opt == "adam":
+			adam_b_mc = np.array(adam_b_m)
+			adam_b_vc = np.array(adam_b_v)
+			adam_w_mc = np.array(adam_w_m)
+			adam_w_vc = np.array(adam_w_v)
 
     a=np.add(np.matmul(h,wt[num_hidden]),bias[num_hidden]) 
     yhat = np.exp(a) / np.sum (np.exp(a),axis=1,keepdims=True)
