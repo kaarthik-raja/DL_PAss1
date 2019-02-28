@@ -308,7 +308,7 @@ def main():
 	parser.add_argument("--sizes", type=csv_list, help="# of Nodes per H_Layer", default= [90,80])
 	parser.add_argument("--activation", type=str, help="activation function", default= "relu", choices=["sigmoid","tanh","relu"])
 	parser.add_argument("--loss", type=str, help="loss function", default= "ce", choices=["sq","ce"])
-	parser.add_argument("--opt", type=str, help="optimizer", default= "gd", choices=["gd","momentum","nag","adam"])
+	parser.add_argument("--opt", type=str, help="optimizer", default= "adam", choices=["gd","momentum","nag","adam"])
 	parser.add_argument("--batch_size", type=int, help="batch size per step", default= 100)
 	parser.add_argument("--epoch", type=int, help="# of Epochs", default= 1000)
 	parser.add_argument("--anneal", type=annealf, help="anneal", default= False,choices=[True,False])
