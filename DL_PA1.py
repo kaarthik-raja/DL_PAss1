@@ -15,13 +15,15 @@ import pickle
 #set random seed for replicability of results
 np.random.seed(1234)
 gamma=0.9
-eta=0.001
+eta=0.0001
 adam_b1=0.9
 adam_bp1=0.9
 adam_b2=0.999
 adam_bp2=0.999
 adam_epsilon= 0.0000001
-ploss=0.0
+ploss=1000000.0
+nof_PCA = 100
+nofpp =0
 #initialize weights and bias
 wt=[] #list of weight matrices 
 bias=[] #list of bias vectors
@@ -46,12 +48,12 @@ def initwts():
 	global adam_w_m,adam_w_v,adam_b_m,adam_b_v,adam_bp2,adam_bp1
 	
 	sizes=np.asarray(sizes)
-	sizes=np.insert(sizes,0,350)
+	sizes=np.insert(sizes,0,nof_PCA)
 	sizes=np.append(sizes,10).astype(int)
 
 	same_model = False
-	if os.path.exists(os.path.join("Model","model.pkl")):
-		with open(os.path.join("Model","model.pkl"), 'rb') as f:
+	if os.path.exists(os.path.join("Model4","model.pkl")):
+		with open(os.path.join("Model4","model.pkl"), 'rb') as f:
 			model=pickle.load(f)
 			nsizes  = model["sizes"]
 			adam_bp2 = model.get("adam_bp2",adam_b2)
@@ -65,9 +67,8 @@ def initwts():
 				same_model = False
 			print("Same  Model :",same_model)
 	if same_model:
-		wt = np.load(os.path.join("Model","wt.npy"))
-		bias = np.load(os.path.join("Model","bias.npy"))
-
+		wt = np.load(os.path.join("Model4","wt.npy"))
+		bias = np.load(os.path.join("Model4","bias.npy"))
 		print("continuing previous model data....")
 	else:
 		wt= [None]*(num_hidden+1)
@@ -79,7 +80,8 @@ def initwts():
 			# b= np.subtract(np.random.rand(sizes[n+1]),0.5)
 			wt[n]=w
 			bias[n]=b
-
+		wt = np.array(wt)
+		bias = np.array(bias)
 	for n in range(num_hidden+1):
 		if opt =="momentum":
 			momentum_w.append(np.zeros((sizes[n],sizes[n+1])))
@@ -94,29 +96,41 @@ def initwts():
 			adam_w_v.append(np.zeros((sizes[n],sizes[n+1])))
 			adam_b_m.append(np.zeros((sizes[n+1])))
 			adam_b_v.append(np.zeros((sizes[n+1])))
+	adam_b_m = np.array(adam_b_m)
+	adam_b_v = np.array(adam_b_v)
+	adam_w_v = np.array(adam_w_v)
+	adam_w_m = np.array(adam_w_m)
 	if same_model:
-		if opt == "adam" and os.path.exists(os.path.join("Model","adam_w_v.npy")):
-			adam_w_v = np.load(os.path.join("Model","adam_w_v.npy"))
-			adam_w_m = np.load(os.path.join("Model","adam_w_m.npy"))
-			adam_b_v = np.load(os.path.join("Model","adam_b_v.npy"))
-			adam_b_m = np.load(os.path.join("Model","adam_b_m.npy"))
+		if opt == "adam" and os.path.exists(os.path.join("Model4","adam_w_v.npy")):
+			adam_w_v = np.load(os.path.join("Model4","adam_w_v.npy"))
+			adam_w_m = np.load(os.path.join("Model4","adam_w_m.npy"))
+			adam_b_v = np.load(os.path.join("Model4","adam_b_v.npy"))
+			adam_b_m = np.load(os.path.join("Model4","adam_b_m.npy"))
 
 def fgrad(hs):
 	if activation == "sigmoid":
 		return np.multiply(hs,1-hs)
-	else:
+	elif activation == "tanh":
 		return np.subtract(1,np.multiply(hs , hs))
+	else:
+		hs[hs<=0]=0
+		hs[hs>0]=1
+		return hs
 
 def fval(a):
 	if activation == "sigmoid":
 		return np.reciprocal(np.add(1,np.exp(np.negative(a) )))
+	elif activation == "tanh":
+		return np.multiply(np.subtract(np.exp(2*a),1) ,  np.reciprocal( np.add( np.exp(2*a),1) )  )
 	else:
-		return np.multiply(np.subtract(np.exp(a),np.exp( np.negative(a) )),np.reciprocal( np.add(np.exp(a),np.exp( np.negative(a) )) ) )
+		a[a<=0]=0
+		return a
 
 # def outputError(y,oneH):
 	# pass
 def optimizer(k,Dwk,Dbk):
 	global wt,bias,momentum_w,momentum_b
+	Dwk = np.add(Dwk,np.multiply(wt[k],0.0001))
 	# print("optimizer",opt,k,Dwk[1,1:4])
 	if opt == "gd":
 		wt[k]=np.subtract(wt[k],np.multiply(eta,Dwk))
@@ -147,9 +161,9 @@ def optimizer(k,Dwk,Dbk):
 #def vanilla_grad_desc(num_hidden,sizes):
 def grad_desc():
 	global freqClass,gloss,adam_bp1,adam_bp2
-	x=mini[0:,0:350]
+	x=mini[0:,0:nof_PCA]
 	x=np.divide(np.subtract(x.astype(float),127),128)
-	y=mini[0:,350]
+	y=mini[0:,nof_PCA]
 
 	hs=[]    
 	h=x
@@ -203,12 +217,13 @@ def grad_desc():
 	return loss
 
 def validation(data,classlbl=False):
-	global adam_bp1,adam_bp2,expt_dir,ploss,eta,anneal
-	x=data[0:,0:350]
+	global adam_bp1,adam_bp2,expt_dir,ploss,eta,anneal,iii,nofp,nofpp
+	global adam_b_mc,adam_w_mc,adam_w_vc,adam_b_vc,wtc,biasc,adam_bp1c,adam_bp2c
+	x=data[0:,0:nof_PCA]
 	x=np.divide(np.subtract(x.astype(float),127),128)
 
 	if not classlbl:
-		y=data[0:,350]
+		y=data[0:,nof_PCA]
 
 	h=x
 	for n in range(num_hidden):
@@ -230,17 +245,38 @@ def validation(data,classlbl=False):
 
 	loss = np.sum(-np.log(yhat[range(x.shape[0]),y.astype(int)]))
 
-	if ploss < loss and anneal:
-		eta = eta*0.8 
+	if anneal:
+		if ploss < loss and nofp < nofpp:
+
+
+			wt = np.array(wtc)
+			bias = np.array(biasc)
+			if opt == "adam":
+				adam_b_m = np.array(adam_b_mc)
+				adam_b_v = np.array(adam_b_vc)
+				adam_w_m = np.array(adam_w_mc)
+				adam_w_v = np.array(adam_w_vc)
+
+			print("anneal",ploss,loss)
+			eta = eta*0.9
+			iii-=10
+
+		wtc = np.array(wt)
+		biasc = np.array(bias)
+		if opt == "adam":
+			adam_b_mc = np.array(adam_b_m)
+			adam_b_vc = np.array(adam_b_v)
+			adam_w_mc = np.array(adam_w_m)
+			adam_w_vc = np.array(adam_w_v)
 
 	oneH = np.zeros((x.shape[0],10))
 	oneH[range(x.shape[0]),y.astype(int)]=1
 
-	nof= np.sum(np.multiply(yt,oneH))
+	nofp= np.sum(np.multiply(yt,oneH))
 	logfile(expt_dir,"log_validation.txt")
-
-
-	print("success:" ,float(nof)/x.shape[0],"\n",freqClass)
+	nofpp = nofp
+	ploss = loss
+	print("success:" ,float(nofp)/x.shape[0],"\n",freqClass)
 
 def csv_list(string):
    return [ int(i) for i in string.split(',')]
@@ -253,7 +289,7 @@ def annealf(string):
 
 def logfile(expt_dir,log_type): #log_type: log_train.txt/log_validation.txt depending upon the data used
 	f_location='%s%s' %(expt_dir,log_type)
-	f=open(f_location , 'w+')
+	f=open(f_location , 'a+')
 	f.write(" Epoch : %d , Step : %d , Loss : %f , Error: %f , lr :%f" %(iii,step,gloss,(55000-nofc[iii])/55000,eta))
 	f.close()    
 
@@ -262,20 +298,20 @@ def testprediction(expt_dir):
 
 def main():
 	global lr,momentum,num_hidden,sizes,activation,loss,opt,batch_size,epoch,anneal,save_dir,expt_dir,train_path,test_path,valid_path
-	global train,test,valid,wt,bias,adam_bp1,adam_bp2,steps_per_batch
+	global train,test,valid,wt,bias,adam_bp1,adam_bp2,steps_per_batch,nofp
 	global iii,jj,mini,nofc,file,freqClass,gloss,step,train,test,valid
 	print("parsing...")
 	parser = agp.ArgumentParser()
 	parser.add_argument("--lr", type=float, help="the learning rate", default=0.01)
 	parser.add_argument("--momentum", type=float, help="the momentum in lr", default=0.5)
-	parser.add_argument("--num_hidden", type=int, help="# of Hidden Layers", default=3)
-	parser.add_argument("--sizes", type=csv_list, help="# of Nodes per H_Layer", default= [200,100,50])
-	parser.add_argument("--activation", type=str, help="activation function", default= "sigmoid", choices=["sigmoid","tanh"])
+	parser.add_argument("--num_hidden", type=int, help="# of Hidden Layers", default=2)
+	parser.add_argument("--sizes", type=csv_list, help="# of Nodes per H_Layer", default= [90,80])
+	parser.add_argument("--activation", type=str, help="activation function", default= "relu", choices=["sigmoid","tanh","relu"])
 	parser.add_argument("--loss", type=str, help="loss function", default= "ce", choices=["sq","ce"])
 	parser.add_argument("--opt", type=str, help="optimizer", default= "gd", choices=["gd","momentum","nag","adam"])
-	parser.add_argument("--batch_size", type=int, help="batch size per step", default= 50)
-	parser.add_argument("--epoch", type=int, help="# of Epochs", default= 5000)
-	parser.add_argument("--anneal", type=annealf, help="anneal", default= True,choices=[True,False])
+	parser.add_argument("--batch_size", type=int, help="batch size per step", default= 100)
+	parser.add_argument("--epoch", type=int, help="# of Epochs", default= 1000)
+	parser.add_argument("--anneal", type=annealf, help="anneal", default= False,choices=[True,False])
 	parser.add_argument("--save_dir", type=str, help="Save dir location", default= "pa1")
 	parser.add_argument("--expt_dir", type=str, help="expt_dir location", default= os.path.join("pa1","exp1"))
 	parser.add_argument("--train", type=str, help="train file location", default= os.path.join("Data","train.csv"))
@@ -306,14 +342,14 @@ def main():
 	y=train[:,785]
 	
 	
-	if os.path.exists(os.path.join("Model","PCA.sav")):
+	if os.path.exists(os.path.join("Model4","PCA.sav")):
 		print("PCA exists")
-		pcamod = joblib.load(os.path.join("Model","PCA.sav"))
+		pcamod = joblib.load(os.path.join("Model4","PCA.sav"))
 	else:
-		pca=PCA(n_components=350)
+		pca=PCA(n_components=nof_PCA)
 		pcamod=pca.fit(x) #pickle this to use it on test data
 		print("Dumping  PCA")
-		joblib.dump(pcamod, os.path.join("Model","PCA.sav"))
+		joblib.dump(pcamod, os.path.join("Model4","PCA.sav"))
 	x=pcamod.transform(x)
 
 	
@@ -331,7 +367,8 @@ def main():
 	steps_per_batch=int(train.shape[0]/batch_size)
 	initwts()
 	nofc=np.zeros(epoch)
-
+	nofp=0
+	print("dets","test_submission_"+activation+"_"+"_".join([str(e) for e in sizes])+"_"+str(int((nofp*10000)/(valid.shape[0])) )+".csv")
 	step=0 # update step for printing loss
 	for iii in range(epoch):
 		np.random.shuffle(train)
@@ -347,25 +384,25 @@ def main():
 
 		if (iii%10)==0:
 			validation(valid)
-		if (iii %100) == 30:
-			with open(os.path.join("Model","model.pkl"), 'wb') as f:
+		if (iii %100) == 20:
+			with open(os.path.join("Model4","model.pkl"), 'wb') as f:
 				model = {}
 				model["sizes"]=sizes
 				model["num_hidden"]=num_hidden
 				if opt =="adam":
 					model["adam_bp1"]=adam_bp1
 					model["adam_bp2"]=adam_bp2
-					np.save(os.path.join("Model","adam_w_v.npy"),np.array(adam_w_v))
-					np.save(os.path.join("Model","adam_b_v.npy"),np.array(adam_b_v))
-					np.save(os.path.join("Model","adam_w_m.npy"),np.array(adam_w_m))
-					np.save(os.path.join("Model","adam_b_m.npy"),np.array(adam_b_m))
+					np.save(os.path.join("Model4","adam_w_v.npy"),np.array(adam_w_v))
+					np.save(os.path.join("Model4","adam_b_v.npy"),np.array(adam_b_v))
+					np.save(os.path.join("Model4","adam_w_m.npy"),np.array(adam_w_m))
+					np.save(os.path.join("Model4","adam_b_m.npy"),np.array(adam_b_m))
 
 				pickle.dump(model, f)
-				np.save(os.path.join("Model","wt.npy"),np.array(wt))
-				np.save(os.path.join("Model","bias.npy"),np.array(bias))
+				np.save(os.path.join("Model4","wt.npy"),np.array(wt))
+				np.save(os.path.join("Model4","bias.npy"),np.array(bias))
 
-		print("\n ",iii,nofc[iii],freqClass.astype(int),gloss)
-		if gloss<80 and nofc[iii]==train.shape[0]:
+		print("\n: ",iii,nofc[iii],freqClass.astype(int),gloss)
+		if gloss<40 and nofc[iii]>=train.shape[0]-2 and iii > 100:
 			break
 	# for i in range(10):
 		# yc=vanilla_grad_desc(num_hidden,sizes)
@@ -381,7 +418,7 @@ def main():
 	x=pcamod.transform(x)
 	ypred=validation(x,classlbl=True)
 
-	fn="test_submission.csv"
+	fn="test_submission_"+activation+"_"+"_".join([str(e) for e in sizes[:-1]])+"_"+str(int((nofp*10000)/(valid.shape[0])) )+".csv"
 	f_location  = os.path.join(expt_dir,fn)
 	fpred=open(f_location,'a+')
 	fpred.write("id,label\n")
@@ -390,7 +427,7 @@ def main():
 	# print("  ",ypred[2000:2500],sno[])
 	fpred.close()
 
-
+	print(sizes,"sizes")
 
 	
 if __name__=="__main__":
