@@ -26,8 +26,8 @@ bias=[] #list of bias vectors
 
 momentum_w=[]
 momentum_b=[]
-tloss=np.zeros(epoch)
-vloss=np.zeros(epoch)
+tloss=np.zeros(50)
+vloss=np.zeros(50)
 
 
 look_w=[]
@@ -238,10 +238,8 @@ def validation(data,classlbl=False):
 
     nof= np.sum(np.multiply(yt,oneH))
     logfile(expt_dir,"log_validation.txt")
-    vloss.append(step,loss)
-
-    print("success:" ,float(nof)/x.shape[0],"\n",freqClass)
-
+    return loss
+   
 
 def csv_list(string):
    return [ int(i) for i in string.split(',')]
@@ -255,7 +253,7 @@ def annealf(string):
 def logfile(expt_dir,log_type): #log_type: log_train.txt/log_validation.txt depending upon the data used
     f_location='%s%s' %(expt_dir,log_type)
     f=open(f_location , 'a+')
-    f.write(" Epoch : %d , Step : %d , Loss : %f , Error: %f , lr :%f" %(iii,step,gloss,(55000-nofc[iii])/55000,eta))
+    f.write(" Epoch : %d , Step : %d , Loss : %f , Error: %f , lr :%f \n" %(iii,step,gloss,(55000-nofc[iii])/55000,eta))
     f.close()    
 
 def testprediction(expt_dir):
@@ -344,12 +342,9 @@ def main():
                 logfile(expt_dir,"log_train.txt")
             mini = train[jj*batch_size:(jj+1)*batch_size,:]
             lloss=grad_desc()
-            tloss.append(step,lloss)
-
-
-
-        if (iii%10)==0:
-            validation(valid)
+        tloss[iii]=gloss
+        vloss[iii]=validation(valid)
+        
         if (iii %100) == 30:
             with open(os.path.join("Model","model.pkl"), 'wb') as f:
                 model = {}
@@ -376,22 +371,22 @@ def main():
     file.close()
     # plt.pyplot(iii,nofc)
 
-    #test set prediction
-    test=pd.read_csv(test_path)
-    test=test.values
-    sno=test[:,0]
-    x=test[:,1:785]
-    x=pcamod.transform(x)
-    ypred=validation(x,classlbl=True)
-
-    fn="test_submission.csv"
-    f_location  = os.path.join(expt_dir,fn)
-    fpred=open(f_location,'a+')
-    fpred.write("id,label\n")
-    for r in range(x.shape[0]):
-        fpred.write("%d,%d\n"%(sno[r],ypred[r]) )
-    # print("  ",ypred[2000:2500],sno[])
-    fpred.close()
+#    #test set prediction
+#    test=pd.read_csv(test_path)
+#    test=test.values
+#    sno=test[:,0]
+#    x=test[:,1:785]
+#    x=pcamod.transform(x)
+#    ypred=validation(x,classlbl=True)
+#
+#    fn="test_submission.csv"
+#    f_location  = os.path.join(expt_dir,fn)
+#    fpred=open(f_location,'a+')
+#    fpred.write("id,label\n")
+#    for r in range(x.shape[0]):
+#        fpred.write("%d,%d\n"%(sno[r],ypred[r]) )
+#    # print("  ",ypred[2000:2500],sno[])
+#    fpred.close()
 
 
 
