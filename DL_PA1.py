@@ -269,13 +269,18 @@ def validation(data,classlbl=False):
 	if classlbl:
 		print("test",data.shape,freqClass)
 		return np.argmax(yhat,axis=1)
-
-	closs = np.sum(-np.log(yhat[range(x.shape[0]),y.astype(int)]))
-
+		
 	oneH = np.zeros((x.shape[0],10))
 	oneH[range(x.shape[0]),y.astype(int)]=1
 
 	nofp= np.sum(np.multiply(yt,oneH))
+
+	if loss == "ce":
+		closs = np.sum(-np.log(yhat[range(x.shape[0]),y.astype(int)]))
+	elif loss == "sq":
+		closs = np.sum( np.multiply( np.subtract(yhat,oneH),np.subtract(yhat,oneH) ) )/2
+
+
 
 	if anneal:
 		print("anneal",ploss,closs,nofp,nofpp)
