@@ -120,6 +120,22 @@ def initwts():
 	sizes=np.insert(sizes,0,nof_PCA)
 	sizes=np.append(sizes,10).astype(int)
 
+	wt=[] #list of weight matrices 
+	bias=[] #list of bias vectors
+
+	momentum_w=[]
+	momentum_b=[]
+
+
+	look_w=[]
+	look_b=[]
+	update_w=[]
+	update_b=[]
+
+	adam_w_m=[]
+	adam_w_v=[]
+	adam_b_m=[]
+	adam_b_v=[]
 	adam_bp1=0.9
 	adam_bp2=0.999
 	wt= [None]*(num_hidden+1)
@@ -269,7 +285,7 @@ def validation(data,classlbl=False):
 	if classlbl:
 		print("test",data.shape,freqClass)
 		return np.argmax(yhat,axis=1)
-		
+
 	oneH = np.zeros((x.shape[0],10))
 	oneH[range(x.shape[0]),y.astype(int)]=1
 
@@ -421,8 +437,8 @@ def main():
 			tloss.append(cum_loss_epoch)	
 			vloss.append(lossv)	
 
-		np.save(os.path.join(expt_dir,"_"+ activation+"_" +loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"tloss.npy"),np.array(tloss))
-		np.save(os.path.join(expt_dir,"_"+ activation+"_" +loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"vloss.npy"),np.array(vloss))
+		np.save(os.path.join(expt_dir,"D","_"+ activation+"_" +loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"tloss.npy"),np.array(tloss))
+		np.save(os.path.join(expt_dir,"D","_"+ activation+"_" +loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"vloss.npy"),np.array(vloss))
 
 		print("===============\n=================\n=================\n==================")
 #====================
