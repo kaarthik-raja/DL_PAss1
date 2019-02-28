@@ -21,6 +21,7 @@ adam_bp1=0.9
 adam_b2=0.999
 adam_bp2=0.999
 adam_epsilon= 0.0000001
+ploss=0.0
 #initialize weights and bias
 wt=[] #list of weight matrices 
 bias=[] #list of bias vectors
@@ -62,7 +63,7 @@ def initwts():
 						same_model = False
 			else:
 				same_model = False
-			print("Same Different Model",same_model)
+			print("Same  Model :",same_model)
 	if same_model:
 		wt = np.load(os.path.join("Model","wt.npy"))
 		bias = np.load(os.path.join("Model","bias.npy"))
@@ -128,9 +129,9 @@ def optimizer(k,Dwk,Dbk):
 		momentum_b[k]=np.add(momentum_b[k], np.multiply(eta,Dbk))
 		bias[k]=np.subtract(bias[k], momentum_b[k])
 	elif opt == "nag":
-		update_w[k]= np.sum( np.multiply(gamma,update_w[k]),np.multiply(eta,Dwk) )
+		update_w[k]= np.add( np.multiply(gamma,update_w[k]),np.multiply(eta,Dwk) )
 		look_w[k]= np.subtract(look_w[k],update_w[k])
-		update_b[k]= np.sum( np.multiply(gamma,update_b[k]),np.multiply(eta,Dbk) )
+		update_b[k]= np.add( np.multiply(gamma,update_b[k]),np.multiply(eta,Dbk) )
 		look_b[k]= np.subtract(look_b[k],update_b[k])
 	elif opt == "adam":
 		adam_w_m[k] = np.add(np.multiply(adam_b1,adam_w_m[k]),np.multiply(1-adam_b1,Dwk))
@@ -155,8 +156,10 @@ def grad_desc():
 	hs.append(h)
 	
 	if opt == "nag":
-		wt[k] = np.subtract(look_w[k],np.multiply(gamma,update_w[k]) )
-		bias[k] = np.subtract(look_b[k],np.multiply(gamma,update_b[k]) )
+		for k in range(num_hidden+1):
+			# print(type(look_w),update_w[k])
+			wt[k] = np.subtract(look_w[k],np.multiply(gamma,update_w[k]) )
+			bias[k] = np.subtract(look_b[k],np.multiply(gamma,update_b[k]) )
 
 	#forward Propagation
 	for n in range(num_hidden):
@@ -197,40 +200,46 @@ def grad_desc():
 	if opt == "adam":
 		adam_bp1=adam_bp1*adam_b1
 		adam_bp2=adam_bp2*adam_b2
-	return yhat
+	return loss
 
-def validation():
-	global adam_bp1,adam_bp2
-	x=valid[0:,0:350]
+def validation(data,classlbl=False):
+	global adam_bp1,adam_bp2,expt_dir,ploss,eta,anneal
+	x=data[0:,0:350]
 	x=np.divide(np.subtract(x.astype(float),127),128)
-	y=valid[0:,350]
 
-	hs=[]    
+	if not classlbl:
+		y=data[0:,350]
+
 	h=x
-	hs.append(h)
-	
-	if opt == "nag":
-		wt[k] = np.subtract(look_w[k],np.multiply(gamma,update_w[k]) )
-		bias[k] = np.subtract(look_b[k],np.multiply(gamma,update_b[k]) )
-
-	#forward Propagation
 	for n in range(num_hidden):
 			a=np.add(np.matmul(h,wt[n]),bias[n])
 			h=fval(a)
-			hs.append(h)
 
 	a=np.add(np.matmul(h,wt[num_hidden]),bias[num_hidden]) 
 	yhat = np.exp(a) / np.sum (np.exp(a),axis=1,keepdims=True)
 
-	oneH = np.zeros((x.shape[0],10))
-	oneH[range(x.shape[0]),y.astype(int)]=1
+
 
 	yt = np.zeros((x.shape[0],10))
 	yt[range(x.shape[0]),np.argmax(yhat,axis=1)]=1
 
 	freqClass = np.sum(yt,axis=0)
+	if classlbl:
+		print("test",data.shape,freqClass)
+		return np.argmax(yhat,axis=1)
+
+	loss = np.sum(-np.log(yhat[range(x.shape[0]),y.astype(int)]))
+
+	if ploss < loss and anneal:
+		eta = eta*0.8 
+
+	oneH = np.zeros((x.shape[0],10))
+	oneH[range(x.shape[0]),y.astype(int)]=1
 
 	nof= np.sum(np.multiply(yt,oneH))
+	logfile(expt_dir,"log_validation.txt")
+
+
 	print("success:" ,float(nof)/x.shape[0],"\n",freqClass)
 
 def csv_list(string):
@@ -250,33 +259,22 @@ def logfile(expt_dir,log_type): #log_type: log_train.txt/log_validation.txt depe
 
 def testprediction(expt_dir):
 	pass
-def predict(x):
-    h=x
-    for n in range(num_hidden):
-            a=np.add(np.matmul(h,wt[n]),bias[n])
-            h=fval(a)
-            hs.append(h)
-
-    a=np.add(np.matmul(h,wt[num_hidden]),bias[num_hidden]) 
-    yhat = np.exp(a) / np.sum (np.exp(a),axis=1,keepdims=True)
-    return yhat
-
 
 def main():
 	global lr,momentum,num_hidden,sizes,activation,loss,opt,batch_size,epoch,anneal,save_dir,expt_dir,train_path,test_path,valid_path
-	global train,test,valid,wt,bias,adam_bp1,adam_bp2
-	global iii,jj,mini,nofc,file,freqClass,gloss,step
+	global train,test,valid,wt,bias,adam_bp1,adam_bp2,steps_per_batch
+	global iii,jj,mini,nofc,file,freqClass,gloss,step,train,test,valid
 	print("parsing...")
 	parser = agp.ArgumentParser()
 	parser.add_argument("--lr", type=float, help="the learning rate", default=0.01)
 	parser.add_argument("--momentum", type=float, help="the momentum in lr", default=0.5)
-	parser.add_argument("--num_hidden", type=int, help="# of Hidden Layers", default=2)
-	parser.add_argument("--sizes", type=csv_list, help="# of Nodes per H_Layer", default= [100,100])
+	parser.add_argument("--num_hidden", type=int, help="# of Hidden Layers", default=3)
+	parser.add_argument("--sizes", type=csv_list, help="# of Nodes per H_Layer", default= [200,100,50])
 	parser.add_argument("--activation", type=str, help="activation function", default= "sigmoid", choices=["sigmoid","tanh"])
 	parser.add_argument("--loss", type=str, help="loss function", default= "ce", choices=["sq","ce"])
 	parser.add_argument("--opt", type=str, help="optimizer", default= "adam", choices=["gd","momentum","nag","adam"])
 	parser.add_argument("--batch_size", type=int, help="batch size per step", default= 50)
-	parser.add_argument("--epoch", type=int, help="# of EPOCHs", default= 5)
+	parser.add_argument("--epoch", type=int, help="# of Epochs", default= 5000)
 	parser.add_argument("--anneal", type=annealf, help="anneal", default= True,choices=[True,False])
 	parser.add_argument("--save_dir", type=str, help="Save dir location", default= "pa1")
 	parser.add_argument("--expt_dir", type=str, help="expt_dir location", default= os.path.join("pa1","exp1"))
@@ -294,7 +292,6 @@ def main():
 	test_path=args.test
 	valid_path=args.validation
 
-
 	file = open("train.txt","w")
 	train=pd.read_csv(train_path)
 	
@@ -305,11 +302,9 @@ def main():
 
 	train=train.values
 	valid=valid.values
-	x=train[:,0:785]
+	x=train[:,1:785]
 	y=train[:,785]
 	
-	x_val=valid[:,0:785]
-	y_val =valid[:,785]
 	
 	if os.path.exists(os.path.join("Model","PCA.sav")):
 		print("PCA exists")
@@ -321,50 +316,38 @@ def main():
 		joblib.dump(pcamod, os.path.join("Model","PCA.sav"))
 	x=pcamod.transform(x)
 
-	yn = y.reshape(55000,1)
+	
+	yn = y.reshape(x.shape[0],1)
 	train=  np.hstack((x,yn))
 
 
+	x_val=valid[:,1:785]
+	y_val =valid[:,785]
 	x_val =pcamod.transform(x_val)
 	yn = y_val.reshape(y_val.shape[0],1)
 	valid=  np.hstack((x_val,yn))
 
-	
-    #validation error
-	valid=np.divide(np.subtract(valid.astype(float),127),128)
-	x=valid[:,0:785]
-	y=valid[:,785]
-	x=pcamod.transform(x)
-	yn = y.reshape(55000,1)
-	valid=  np.hstack((x,yn))
-	ypred=predict(x)
-	loss = np.sum(-np.log(ypred[range(x.shape[0]),y.astype(int)]))
-	oneH = np.zeros((x.shape[0],10))
-	oneH[range(x.shape[0]),y.astype(int)]=1
-	yt = np.zeros((x.shape[0],10))
-	yt[range(x.shape[0]),np.argmax(yhat,axis=1)]=1
-	freqClass += np.sum(yt,axis=0)
-	nof= np.sum(np.multiply(yt,oneH))
-	print(" Correctly classified samples ratio is %d \n"%round((nof/55000),2))
-	logfile(expt_dir,"log_validation.txt")
-
+	# print(" Correctly classified samples ratio is %d \n"%round((nof/55000),2))
+	steps_per_batch=int(train.shape[0]/batch_size)
 	initwts()
-	nofc=np.zeros(500)
+	nofc=np.zeros(epoch)
 
 	step=0 # update step for printing loss
-	for iii in range(50):
+	for iii in range(epoch):
 		np.random.shuffle(train)
 		freqClass = np.zeros(10)
 		gloss=0
-		for jj in range(np.divide(55000,batch_size)):
+		for jj in range(steps_per_batch):
 			step=step+1
 			if(step%100==0):
 				logfile(expt_dir,"log_train.txt")
 			mini = train[jj*batch_size:(jj+1)*batch_size,:]
-			ycm=grad_desc()
+			lloss=grad_desc()
 
-		if (iii %100) == 10:
-			#validation()
+
+		if (iii%10)==0:
+			validation(valid)
+		if (iii %100) == 30:
 			with open(os.path.join("Model","model.pkl"), 'wb') as f:
 				model = {}
 				model["sizes"]=sizes
@@ -381,38 +364,35 @@ def main():
 				np.save(os.path.join("Model","wt.npy"),np.array(wt))
 				np.save(os.path.join("Model","bias.npy"),np.array(bias))
 
-
-
 		print("\n ",iii,nofc[iii],freqClass.astype(int),gloss)
+		if gloss<80 and nofc[iii]==train.shape[0]:
+			break
 	# for i in range(10):
 		# yc=vanilla_grad_desc(num_hidden,sizes)
 	
 	file.close()
-	plt.pyplot(iii,nofc)
+	# plt.pyplot(iii,nofc)
 
-    #test set prediction
+	#test set prediction
 	test=pd.read_csv(test_path)
-	test=np.divide(np.subtract(test.values.astype(float),127),128)
-	test=test.as_matrix()
+	test=test.values
 	sno=test[:,0]
-	x=test[:,0:785]
+	x=test[:,1:785]
 	x=pcamod.transform(x)
-	ypred=predict(x)
-	predclass = np.zeros(x.shape[0])
-	for i in range(x.shape[0]):
-		predclass[i]=np.argmax(ypred[i],axis=1)
+	ypred=validation(x,classlbl=True)
 
 	fn="test_submission.csv"
-	f_location  = "%s%s"%(expt_dir,fn)
+	f_location  = os.path.join(expt_dir,fn)
 	fpred=open(f_location,'a+')
-	fpred.write("id,csv \n")
-	for r in range(test.size[0]):
-		fpred.write(sno[r],predclass[r])
+	fpred.write("id,label\n")
+	for r in range(x.shape[0]):
+		fpred.write("%d,%d\n"%(sno[r],ypred[r]) )
+	# print("  ",ypred[2000:2500],sno[])
 	fpred.close()
 
 
 
-    
+	
 if __name__=="__main__":
 	main()
 	
