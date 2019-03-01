@@ -196,7 +196,7 @@ def optimizer(k,Dwk,Dbk):
 # implementing functions to do different tasks. This is the main function block
 #def vanilla_grad_desc(num_hidden,sizes):
 def grad_desc():
-	global freqClass,gloss,adam_bp1,adam_bp2
+	global freqClass,gloss,adam_bp1,adam_bp2,truth
 	x=mini[0:,0:nof_PCA]
 	x=np.divide(np.subtract(x.astype(float),127),128)
 	y=mini[0:,nof_PCA]
@@ -397,13 +397,13 @@ def main():
 
 	# print(" Correctly classified samples ratio is %d \n"%round((nof/55000),2))
 
-	steps_per_batch=int(train.shape[0]/batch_size)
 
 #=====================
-	epoch =3
-	for batch_size in [1,20,100,1000]:
+	for batch_sizec in [1,20,100,1000]:
+		
+		batch_size=batch_sizec
+		steps_per_batch=int(train.shape[0]/batch_size)
 		sizes = [100,100]
-		opt = opti
 		tloss=[]
 		vloss=[]
 		# num_hidden = len(sizes) 
@@ -423,11 +423,11 @@ def main():
 			for jj in range(steps_per_batch):
 				step=step+1
 				if(step%100==0):
-					logfile(expt_dir,"_"+ activation+"_"+batch_size+"_" +loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"train.txt" ,cum_loss_step,cum_error_step/100)
+					logfile(expt_dir,"_"+ activation+"_"+str(batch_size)+"_" +loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"train.txt" ,cum_loss_step,cum_error_step/100)
 					(lossv,nof) = validation(valid)
 					cum_error_step=0
 					cum_loss_step=0
-					logfile(expt_dir,"_"+ activation+"_"+batch_size+"_" +loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"valid.txt" ,lossv,nof)
+					logfile(expt_dir,"_"+ activation+"_"+str(batch_size)+"_" +loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"valid.txt" ,lossv,nof)
 
 				mini = train[jj*batch_size:(jj+1)*batch_size,:]
 				(lloss,nof,pred)=grad_desc()
@@ -439,8 +439,8 @@ def main():
 			tloss.append(cum_loss_epoch)	
 			vloss.append(lossv)	
 
-		np.save(os.path.join(expt_dir,"D","_"+ activation+"_" +batch_size+loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"tloss.npy"),np.array(tloss))
-		np.save(os.path.join(expt_dir,"D","_"+ activation+"_" +batch_size+loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"vloss.npy"),np.array(vloss))
+		np.save(os.path.join(expt_dir,"D","_"+ activation+"_" +str(batch_size)+loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"tloss.npy"),np.array(tloss))
+		np.save(os.path.join(expt_dir,"D","_"+ activation+"_" +str(batch_size)+loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"vloss.npy"),np.array(vloss))
 
 		print("===============\n=================\n=================\n==================")
 #====================
