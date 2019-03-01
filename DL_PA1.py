@@ -113,7 +113,7 @@ def initwts():
 
 	global sizes,wt,bias
 	global momentum_w,momentum_b
-	global look_w,look_b
+	global look_w,look_b,update_w,update_b
 	global adam_w_m,adam_w_v,adam_b_m,adam_b_v,adam_bp2,adam_bp1
 	
 	sizes=np.asarray(sizes)
@@ -161,7 +161,6 @@ def initwts():
 			adam_w_v.append(np.zeros((sizes[n],sizes[n+1])))
 			adam_b_m.append(np.zeros((sizes[n+1])))
 			adam_b_v.append(np.zeros((sizes[n+1])))
-
 # def outputError(y,oneH):
 	# pass
 def optimizer(k,Dwk,Dbk):
@@ -342,7 +341,7 @@ def main():
 	parser.add_argument("--lr", type=float, help="the learning rate", default=0.001)
 	parser.add_argument("--momentum", type=float, help="the momentum in lr", default=0.9)
 	parser.add_argument("--num_hidden", type=int, help="# of Hidden Layers", default=2)
-	parser.add_argument("--sizes", type=csv_list, help="# of Nodes per H_Layer", default= [90,80])
+	parser.add_argument("--sizes", type=csv_list, help="# of Nodes per H_Layer", default= [100,100])
 	parser.add_argument("--activation", type=str, help="activation function", default= "sigmoid", choices=["sigmoid","tanh","relu"])
 	parser.add_argument("--loss", type=str, help="loss function", default= "ce", choices=["sq","ce"])
 	parser.add_argument("--opt", type=str, help="optimizer", default= "adam", choices=["gd","momentum","nag","adam"])
@@ -401,10 +400,13 @@ def main():
 	steps_per_batch=int(train.shape[0]/batch_size)
 
 #=====================
-	for sizes in [[50],[100],[200],[300],[50,50],[100,100],[200,200],[300,300]]:
+	epoch =3
+	for batch_size in [1,20,100,1000]:
+		sizes = [100,100]
+		opt = opti
 		tloss=[]
 		vloss=[]
-		num_hidden = len(sizes) 
+		# num_hidden = len(sizes) 
 		initwts()
 		nofp=0#comes from validation
 		lloss=0
@@ -421,11 +423,11 @@ def main():
 			for jj in range(steps_per_batch):
 				step=step+1
 				if(step%100==0):
-					logfile(expt_dir,"_"+ activation+"_" +loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"train.txt" ,cum_loss_step,cum_error_step/100)
+					logfile(expt_dir,"_"+ activation+"_"+batch_size+"_" +loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"train.txt" ,cum_loss_step,cum_error_step/100)
 					(lossv,nof) = validation(valid)
 					cum_error_step=0
 					cum_loss_step=0
-					logfile(expt_dir,"_"+ activation+"_" +loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"valid.txt" ,lossv,nof)
+					logfile(expt_dir,"_"+ activation+"_"+batch_size+"_" +loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"valid.txt" ,lossv,nof)
 
 				mini = train[jj*batch_size:(jj+1)*batch_size,:]
 				(lloss,nof,pred)=grad_desc()
@@ -437,8 +439,8 @@ def main():
 			tloss.append(cum_loss_epoch)	
 			vloss.append(lossv)	
 
-		np.save(os.path.join(expt_dir,"D","_"+ activation+"_" +loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"tloss.npy"),np.array(tloss))
-		np.save(os.path.join(expt_dir,"D","_"+ activation+"_" +loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"vloss.npy"),np.array(vloss))
+		np.save(os.path.join(expt_dir,"D","_"+ activation+"_" +batch_size+loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"tloss.npy"),np.array(tloss))
+		np.save(os.path.join(expt_dir,"D","_"+ activation+"_" +batch_size+loss+"("+",".join([str(e) for e in sizes[:-1]])+")_"+"vloss.npy"),np.array(vloss))
 
 		print("===============\n=================\n=================\n==================")
 #====================
